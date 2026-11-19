@@ -27,6 +27,18 @@ tone:
     - "haddan tashqari rasmiy uslub"
     - "tekshirilmagan da'volar"
 
+strategy:
+  posts_per_week: 5          # haftasiga nechta post
+  reels_per_week: 2          # shundan nechtasi Reels
+  # Kontent ruknlari (mavzu yo'nalishlari)
+  pillars:
+    - "Real vaziyatlar (restoran, taksi, bozor, mehmonxona)"
+    - "HSK imtihoniga tayyorgarlik"
+    - "Keng tarqalgan xatolar va talaffuz"
+    - "Xitoy madaniyati va odatlari"
+    - "Biznes va savdo xitoy tili (Yiwu, Guangzhou)"
+    - "Xitoyda o'qish va grantlar"
+
 caption:
   max_length: 2200           # Instagram chegarasi
   hashtags_count: 10

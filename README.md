@@ -6,7 +6,7 @@ O'zbek tilli o'quvchilarga Xitoy tilini o'rgatuvchi **Balla China** brendi uchun
 
 ---
 
-## Hozirgi holat: 3-bosqich ✅
+## Hozirgi holat: MVP tayyor — 4-bosqich ✅
 
 | Bosqich | Mazmuni | Holat |
 |---|---|---|
@@ -14,7 +14,7 @@ O'zbek tilli o'quvchilarga Xitoy tilini o'rgatuvchi **Balla China** brendi uchun
 | 1 | Birinchi kontent (terminalda) | ✅ Tayyor |
 | 2 | Telegram orqali tasdiqlash, Carousel, Reels | ✅ Tayyor |
 | 3 | Instagram'ga joylash (tasdiqdan keyin) | ✅ Tayyor |
-| 4 | Strategiya, analitika, n8n | ⏳ |
+| 4 | Haftalik reja, statistika hisoboti, n8n jadvali | ✅ Tayyor |
 
 ---
 
@@ -92,6 +92,8 @@ Bot faqat **sizning** ID'ingizga javob beradi. Boshqa odamlar yozsa — javob be
 | `/reels salomlashish 2` | Reels ssenariysi |
 | `/list` | Oxirgi 10 ta qoralama va holati |
 | `/show 3` | 3-qoralamani qayta ko'rish |
+| `/plan` | Haftalik kontent rejasi — har bir mavzu ostida **▶️** tugma (bosilsa qoralama tayyorlanadi) |
+| `/report` | Instagram statistikasi: o'rtacha ko'rsatkichlar, eng ko'p saqlanganlar, AI tavsiyalari |
 | `/cancel` | Tahrirni bekor qilish |
 
 **Tugmalar:** ✅ Tasdiqlash → "Ha, aniq tasdiqlayman" (ikki bosqich) · ✏️ Tahrir (izoh yozasiz, qayta tayyorlanadi) · ❌ Rad etish.
@@ -135,7 +137,35 @@ Hammasi joyida bo'lsa → `DRY_RUN=false` qilib, botni qayta ishga tushiring.
 - ⚠️ Token 60 kundan keyin eskiradi — yangisini olib, `.env` ga yozing.
 - Hozircha faqat **carousel** joylanadi. Reels'ni video suratga olgach, o'zingiz joylaysiz.
 
-### 9. Dizayn
+### 9. Haftalik reja va hisobot (n8n)
+
+**Qo'lda:** Telegram'da `/plan` yoki `/report`. Yoki terminalda:
+```bash
+python main.py --report            # statistika hisoboti
+python main.py --plan --notify     # reja tuzib, Telegram'ga yuborish
+```
+
+**Avtomatik (n8n):** har dushanba 09:00 da hisobot va yangi reja Telegram'ga keladi.
+1. n8n'ni **shu kompyuterda** o'rnating (`npx n8n` yoki Docker) — buyruq loyiha papkasida ishlashi kerak.
+2. n8n → **Workflows → Import from file** → `n8n/weekly_plan_and_report.json`.
+3. "Hisobot + reja → Telegram" tugunida `/SIZNING/YOLINGIZ/balla-china-ai` ni loyiha papkangizga almashtiring
+   (Windows'da: `cd C:\yol\balla-china-ai && .venv\Scripts\python main.py ...`).
+4. Workflow'ni **Active** qiling. Vaqt mintaqasi: Asia/Tashkent.
+
+> Yangi n8n versiyalarida **Execute Command** tuguni standart holatda o'chirilgan bo'lishi mumkin.
+> Unda n8n'ni `NODES_EXCLUDE="[]"` muhit o'zgaruvchisi bilan ishga tushiring.
+
+**n8n'siz muqobil (Mac/Linux cron):** `crontab -e` →
+```
+0 9 * * 1 cd /yol/balla-china-ai && .venv/bin/python main.py --report --notify; .venv/bin/python main.py --plan --notify
+```
+
+**Muhim:** n8n faqat reja va hisobot **yuboradi**. Post yaratish — siz **▶️** ni bosganingizda,
+joylash — 4 ta tasdiqdan keyin. Jadval hech qachon hech narsani joylamaydi.
+
+Reja sozlamalari (`config/brand.yaml` → `strategy`): haftasiga post soni, Reels soni, kontent ruknlari.
+
+### 10. Dizayn
 Slaydlar HTML/CSS shablondan brauzer orqali PNG qilib chiziladi:
 - Shablon: `design/templates/slide.html.j2` (CSS shu faylning boshida)
 - Ranglar va Instagram nomi: `config/brand.yaml`
@@ -155,7 +185,7 @@ Slaydlar HTML/CSS shablondan brauzer orqali PNG qilib chiziladi:
 
 Ton ranglari: 1-ton qizil, 2-ton yashil, 3-ton ko'k, 4-ton binafsha, neytral kulrang.
 
-### 10. Testlar (API kalitsiz ishlaydi)
+### 11. Testlar (API kalitsiz ishlaydi)
 ```bash
 python -m unittest discover tests
 ```
@@ -191,7 +221,9 @@ Tasdiqlanmagan qoralamani "published" qilish kod darajasida **taqiqlangan**.
 - **Carousel agent** (`agents/carousel.py`): HTML shablondan professional slaydlar chizadi (Claude'siz, bepul).
 - **Manager** (`agents/manager.py`): hammasini ketma-ket boshqaradi.
 - **Telegram bot** (`integrations/telegram_bot.py`): ko'rsatadi va tasdig'ingizni oladi.
-- **Instagram** (`integrations/instagram.py`): tasdiqlangan carousel'ni Graph API orqali joylaydi.
+- **Instagram** (`integrations/instagram.py`): tasdiqlangan carousel'ni Graph API orqali joylaydi va statistikani o'qiydi.
+- **Strategy agent** (`agents/strategy.py`): haftalik reja — ruknlar, HSK aralashmasi, takrorlanmaslik, statistikani hisobga oladi.
+- **Analytics agent** (`agents/analytics.py`): raqamlarni Python hisoblaydi, Claude faqat xulosa va tavsiya yozadi.
 
 Slayd ranglari va Instagram nomi: `config/brand.yaml` → `colors`, `instagram_handle`.
 

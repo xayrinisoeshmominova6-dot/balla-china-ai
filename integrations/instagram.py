@@ -71,8 +71,6 @@ class InstagramClient:
                  sleep: Callable[[float], None] = time.sleep):
         if not settings.INSTAGRAM_ACCESS_TOKEN or not settings.INSTAGRAM_BUSINESS_ACCOUNT_ID:
             raise PublishError("INSTAGRAM_ACCESS_TOKEN yoki INSTAGRAM_BUSINESS_ACCOUNT_ID .env faylida yo'q.")
-        if not settings.IMGBB_API_KEY:
-            raise PublishError("IMGBB_API_KEY .env faylida yo'q (rasmlarni vaqtincha joylash uchun kerak).")
         self.http = session or requests.Session()
         self.sleep = sleep
         self.base = f"https://graph.facebook.com/{settings.INSTAGRAM_GRAPH_VERSION}"
@@ -109,6 +107,8 @@ class InstagramClient:
         return username
 
     def upload_image(self, path: Path) -> str:
+        if not settings.IMGBB_API_KEY:
+            raise PublishError("IMGBB_API_KEY .env faylida yo'q (rasmlarni vaqtincha joylash uchun kerak).")
         data = base64.b64encode(to_jpeg(path)).decode()
         try:
             r = self.http.post(IMGBB_URL, params={"key": settings.IMGBB_API_KEY, "expiration": IMGBB_EXPIRATION},
@@ -147,6 +147,21 @@ class InstagramClient:
         media_id = self._call("POST", f"{self.user_id}/media_publish", {"creation_id": container})["id"]
         permalink = self._call("GET", media_id, {"fields": "permalink"}).get("permalink")
         return PublishResult(False, media_id, permalink, f"@{username} ga joylandi")
+
+
+    # --- statistika (faqat o'qish, hech narsa o'zgartirmaydi) ---
+    def recent_media(self, limit: int = 12) -> List[dict]:
+        fields = "id,caption,media_type,media_product_type,timestamp,permalink,like_count,comments_count"
+        return self._call("GET", f"{self.user_id}/media", {"fields": fields, "limit": limit}).get("data", [])
+
+    def media_insights(self, media_id: str) -> dict:
+        """reach, saved, shares, total_interactions. Olinmasa — bo'sh lug'at."""
+        try:
+            body = self._call("GET", f"{media_id}/insights",
+                              {"metric": "reach,saved,shares,total_interactions"})
+        except PublishError:
+            return {}
+        return {m["name"]: (m.get("values") or [{}])[0].get("value", 0) for m in body.get("data", [])}
 
 
 def validate(image_paths: List[Path], caption: str) -> None:

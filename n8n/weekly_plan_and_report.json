@@ -1,0 +1,35 @@
+{
+  "name": "Balla China — haftalik hisobot va reja",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "cronExpression", "expression": "0 9 * * 1" }
+          ]
+        }
+      },
+      "id": "6f1d3a52-1c1e-4c0e-9a51-6b7f1f0b2a01",
+      "name": "Har dushanba 09:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "command": "cd /SIZNING/YOLINGIZ/balla-china-ai && .venv/bin/python main.py --report --notify; .venv/bin/python main.py --plan --notify"
+      },
+      "id": "6f1d3a52-1c1e-4c0e-9a51-6b7f1f0b2a02",
+      "name": "Hisobot + reja → Telegram",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [280, 0]
+    }
+  ],
+  "connections": {
+    "Har dushanba 09:00": {
+      "main": [[{ "node": "Hisobot + reja → Telegram", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1", "timezone": "Asia/Tashkent" }
+}

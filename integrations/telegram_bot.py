@@ -12,6 +12,8 @@ Buyruqlar:
   /reels <mavzu> [hsk]          reels ssenariy qoralama
   /list                         oxirgi 10 ta qoralama
   /show <id>                    qoralamani qayta ko'rish
+  /plan                         haftalik kontent rejasi (har bir mavzu ostida ▶️ tugma)
+  /report                       Instagram statistikasi bo'yicha hisobot
 """
 import asyncio
 import logging
@@ -35,7 +37,9 @@ HELP = (
     "   masalan: /new salomlashish 1\n"
     "/reels <mavzu> [hsk] — Reels ssenariysi\n"
     "/list — oxirgi qoralamalar\n"
-    "/show <id> — qoralamani ko'rish\n\n"
+    "/show <id> — qoralamani ko'rish\n"
+    "/plan — haftalik kontent rejasi\n"
+    "/report — Instagram statistikasi\n\n"
     "ℹ️ Hech narsa sizning tasdig'ingizsiz joylanmaydi."
 )
 
@@ -90,6 +94,20 @@ def publish_confirm_keyboard(draft_id: int) -> InlineKeyboardMarkup:
         InlineKeyboardButton("🚀 Ha, hozir joylansin", callback_data=f"publish_go:{draft_id}"),
         InlineKeyboardButton("⏸ Keyinroq", callback_data=f"publish_later:{draft_id}"),
     ]])
+
+
+def plan_keyboard(plan_id: int, plan) -> InlineKeyboardMarkup:
+    """Har bir rejadagi post uchun "▶️ N" tugmasi."""
+    buttons = [InlineKeyboardButton(f"▶️ {i}", callback_data=f"plan:{plan_id}:{i - 1}")
+               for i in range(1, len(plan.postlar) + 1)]
+    return InlineKeyboardMarkup([buttons[i:i + 5] for i in range(0, len(buttons), 5)])
+
+
+async def send_plan(bot, chat_id: int, plan_id: int, plan, text: str) -> None:
+    parts = list(chunks(text))
+    for part in parts[:-1]:
+        await bot.send_message(chat_id, part)
+    await bot.send_message(chat_id, parts[-1], reply_markup=plan_keyboard(plan_id, plan))
 
 
 def keyboard_for(rec: DraftRecord) -> Optional[InlineKeyboardMarkup]:
@@ -235,6 +253,45 @@ async def cmd_show(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await send_draft(context.bot, update.effective_chat.id, rec)
 
 
+async def cmd_plan(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    from agents.base import AgentError
+    from agents.weekly import make_plan
+    await update.message.reply_text("🗓 Haftalik reja tuzilmoqda... (1–2 daqiqa)")
+    try:
+        plan_id, plan, text = await asyncio.to_thread(make_plan)
+    except AgentError as e:
+        await update.message.reply_text(f"❌ {e}")
+        return
+    await send_plan(context.bot, update.effective_chat.id, plan_id, plan, text)
+
+
+async def cmd_report(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    from agents.base import AgentError
+    from agents.weekly import make_report
+    from integrations.instagram import PublishError
+    await update.message.reply_text("📊 Statistika yig'ilmoqda...")
+    try:
+        text, _ = await asyncio.to_thread(make_report)
+    except (AgentError, PublishError) as e:
+        await update.message.reply_text(f"❌ {e}")
+        return
+    for part in chunks(text):
+        await update.message.reply_text(part, disable_web_page_preview=True)
+
+
+async def on_plan_button(update: Update, context: ContextTypes.DEFAULT_TYPE, data: str) -> None:
+    """plan:<reja_id>:<post_raqami> → shu mavzu bo'yicha qoralama yaratadi (joylamaydi)."""
+    from agents.strategy import WeekPlan
+    try:
+        _, plan_id, idx = data.split(":")
+        plan = WeekPlan(**database.get_plan(int(plan_id)))
+        item = plan.postlar[int(idx)]
+    except (ValueError, TypeError, IndexError):
+        await update.callback_query.message.reply_text("Reja topilmadi. /plan bilan yangisini tuzing.")
+        return
+    await generate_and_send(update, context, item.mavzu, item.hsk_daraja, item.format)
+
+
 # ---------- tugmalar ----------
 
 async def on_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -244,6 +301,10 @@ async def on_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         log.warning("Begona foydalanuvchi tugma bosdi: %s", update.effective_user.id if update.effective_user else "?")
         return
     await query.answer()
+
+    if (query.data or "").startswith("plan:"):
+        await on_plan_button(update, context, query.data)
+        return
 
     action, _, raw_id = (query.data or "").partition(":")
     if not raw_id.isdigit():
@@ -385,10 +446,26 @@ def build_app(token: str, admin_chat_id: str) -> Application:
     app.add_handler(CommandHandler("list", cmd_list, filters=admin))
     app.add_handler(CommandHandler("show", cmd_show, filters=admin))
     app.add_handler(CommandHandler("cancel", cmd_cancel, filters=admin))
+    app.add_handler(CommandHandler("plan", cmd_plan, filters=admin))
+    app.add_handler(CommandHandler("report", cmd_report, filters=admin))
     app.add_handler(CallbackQueryHandler(on_button))
     app.add_handler(MessageHandler(admin & filters.TEXT & ~filters.COMMAND, on_text))
     # Admin bo'lmagan barcha xabarlar e'tiborsiz qoldiriladi (javob ham berilmaydi).
     return app
+
+
+async def notify(text: str, plan_id: Optional[int] = None, plan=None) -> None:
+    """Bot ishlamayotgan bo'lsa ham Telegram'ga xabar yuboradi (n8n / cron uchun)."""
+    from telegram import Bot
+    if not settings.TELEGRAM_BOT_TOKEN or not str(settings.TELEGRAM_ADMIN_CHAT_ID).strip():
+        raise SystemExit("❌ TELEGRAM_BOT_TOKEN yoki TELEGRAM_ADMIN_CHAT_ID .env faylida yo'q.")
+    chat_id = int(settings.TELEGRAM_ADMIN_CHAT_ID)
+    async with Bot(settings.TELEGRAM_BOT_TOKEN) as bot:
+        if plan is not None:
+            await send_plan(bot, chat_id, plan_id, plan, text)
+        else:
+            for part in chunks(text):
+                await bot.send_message(chat_id, part, disable_web_page_preview=True)
 
 
 def run() -> None:

@@ -90,6 +90,13 @@ def init_db(db_path: Optional[Path] = None) -> None:
                 updated_at TEXT NOT NULL
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS plans (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                data TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+        """)
 
 
 def _now() -> str:
@@ -150,3 +157,36 @@ def set_status(draft_id: int, new_status: str, db_path: Optional[Path] = None) -
                            (new_status, _now(), draft_id, draft.status))
         if cur.rowcount != 1:
             raise StatusError(f"#{draft_id} holati boshqa joyda o'zgartirildi, qayta urinib ko'ring")
+
+
+# ---------- haftalik rejalar (Content Strategy) ----------
+
+def save_plan(data: dict, db_path: Optional[Path] = None) -> int:
+    init_db(db_path)
+    with _connect(db_path) as conn:
+        cur = conn.execute("INSERT INTO plans (data, created_at) VALUES (?, ?)",
+                           (json.dumps(data, ensure_ascii=False), _now()))
+        return cur.lastrowid
+
+
+def get_plan(plan_id: int, db_path: Optional[Path] = None) -> Optional[dict]:
+    init_db(db_path)
+    with _connect(db_path) as conn:
+        r = conn.execute("SELECT data FROM plans WHERE id = ?", (plan_id,)).fetchone()
+        return json.loads(r["data"]) if r else None
+
+
+def recent_topics(limit: int = 30, db_path: Optional[Path] = None) -> List[str]:
+    """Oxirgi qoralama va reja mavzulari — takrorlanmaslik uchun."""
+    init_db(db_path)
+    with _connect(db_path) as conn:
+        topics = [r["topic"] for r in conn.execute(
+            "SELECT topic FROM drafts WHERE status != 'revised' ORDER BY id DESC LIMIT ?", (limit,))]
+        for r in conn.execute("SELECT data FROM plans ORDER BY id DESC LIMIT 4"):
+            topics += [i["mavzu"] for i in json.loads(r["data"]).get("postlar", [])]
+    seen, unique = set(), []
+    for t in topics:
+        if t.lower() not in seen:
+            seen.add(t.lower())
+            unique.append(t)
+    return unique[:limit]

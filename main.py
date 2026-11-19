@@ -5,6 +5,8 @@ Foydalanish:
   python main.py "salomlashish" --hsk 1               # carousel qoralama (terminalda)
   python main.py "salomlashish" --hsk 1 --format reels  # reels ssenariy (terminalda)
   python main.py --bot                                # Telegram botni ishga tushirish
+  python main.py --plan [--notify]                    # haftalik reja (Telegram'ga yuborish)
+  python main.py --report [--notify]                  # Instagram statistikasi hisoboti
 
 Eslatma: bu dastur hech narsani Instagram'ga JOYLAMAYDI.
 """
@@ -58,6 +60,34 @@ def show(draft) -> None:
     print("ℹ️  Bu faqat qoralama. Instagram'ga hech narsa joylanmadi.")
 
 
+def weekly(args) -> None:
+    """Reja / hisobot. n8n yoki cron shu buyruqni jadval bo'yicha chaqiradi."""
+    import asyncio
+    from agents.base import AgentError
+    from integrations.instagram import PublishError
+
+    try:
+        if args.report:
+            from agents.weekly import make_report
+            text, _ = make_report()
+            print(text)
+            if args.notify:
+                from integrations.telegram_bot import notify
+                asyncio.run(notify(text))
+        if args.plan:
+            from agents.weekly import make_plan
+            plan_id, plan, text = make_plan()
+            print(text)
+            if args.notify:
+                from integrations.telegram_bot import notify
+                asyncio.run(notify(text, plan_id, plan))
+    except (AgentError, PublishError) as e:
+        print(f"❌ {e}")
+        sys.exit(1)
+    if args.notify:
+        print("📨 Telegram'ga yuborildi.")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Balla China kontent qoralamasi yaratish")
     parser.add_argument("mavzu", nargs="?", help="Post mavzusi, masalan: \"salomlashish\"")
@@ -65,7 +95,14 @@ def main() -> None:
     parser.add_argument("--format", default="carousel", choices=["carousel", "reels"])
     parser.add_argument("--check", action="store_true", help="Faqat sozlamalarni tekshirish")
     parser.add_argument("--bot", action="store_true", help="Telegram botni ishga tushirish")
+    parser.add_argument("--plan", action="store_true", help="Haftalik kontent rejasi")
+    parser.add_argument("--report", action="store_true", help="Instagram statistikasi hisoboti")
+    parser.add_argument("--notify", action="store_true", help="Natijani Telegram'ga yuborish (n8n uchun)")
     args = parser.parse_args()
+
+    if args.plan or args.report:
+        weekly(args)
+        return
 
     if args.bot:
         from integrations.telegram_bot import run
