@@ -36,7 +36,7 @@ class QCReport(BaseModel):
         return "\n".join(f"- [{i.joy}] {i.muammo} → {i.taklif}" for i in self.muammolar)
 
 
-def rule_checks(lesson: LessonContent, caption: Caption) -> List[Issue]:
+def rule_checks(lesson: LessonContent, caption: Caption, extra_text: str = "") -> List[Issue]:
     """API'siz, oddiy Python qoidalari bilan tekshirish."""
     brand = settings.load_brand()
     issues: List[Issue] = []
@@ -45,6 +45,7 @@ def rule_checks(lesson: LessonContent, caption: Caption) -> List[Issue]:
         "sarlavha": lesson.sarlavha,
         "maslahat": lesson.maslahat,
         "caption": caption.full_text(),
+        "reels_ssenariy": extra_text,
     }
     for i, w in enumerate(lesson.sozlar):
         texts[f"sozlar[{i}].tarjima"] = w.tarjima
@@ -73,11 +74,14 @@ def rule_checks(lesson: LessonContent, caption: Caption) -> List[Issue]:
     return issues
 
 
-def review(lesson: LessonContent, caption: Caption) -> QCReport:
+def review(lesson: LessonContent, caption: Caption, extra_text: str = "") -> QCReport:
+    """extra_text — qo'shimcha tekshiriladigan matn (masalan, Reels ssenariysi)."""
     message = (
         f"Dars mazmuni:\n{lesson.model_dump_json(indent=2)}\n\n"
         f"Caption:\n{caption.full_text()}\n"
     )
+    if extra_text:
+        message += f"\nReels ssenariysi:\n{extra_text}\n"
     report = ask_claude(load_prompt("quality"), message, QCReport)
-    report.muammolar = rule_checks(lesson, caption) + report.muammolar
+    report.muammolar = rule_checks(lesson, caption, extra_text) + report.muammolar
     return report

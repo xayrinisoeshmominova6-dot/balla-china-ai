@@ -1,8 +1,10 @@
 """BALLA CHINA AI MANAGER — ishga tushirish nuqtasi.
 
 Foydalanish:
-  python main.py --check                      # sozlamalarni tekshirish
-  python main.py "salomlashish" --hsk 1       # yangi kontent qoralamasi yaratish
+  python main.py --check                              # sozlamalarni tekshirish
+  python main.py "salomlashish" --hsk 1               # carousel qoralama (terminalda)
+  python main.py "salomlashish" --hsk 1 --format reels  # reels ssenariy (terminalda)
+  python main.py --bot                                # Telegram botni ishga tushirish
 
 Eslatma: bu dastur hech narsani Instagram'ga JOYLAMAYDI.
 """
@@ -30,13 +32,15 @@ def check() -> None:
 def show(draft) -> None:
     lesson, caption, qc = draft.lesson, draft.caption, draft.qc
     line = "─" * 50
-    print(f"\n{line}\n📌 {lesson.sarlavha}   [HSK {lesson.hsk_daraja}]\n{line}")
+    print(f"\n{line}\n📄 Qoralama #{draft.id}\n📌 {lesson.sarlavha}   [HSK {lesson.hsk_daraja}]\n{line}")
     for i, w in enumerate(lesson.sozlar, 1):
         print(f"\n{i}. {w.hanzi}  ({w.pinyin}) — {w.tarjima}")
         print(f"   Misol: {w.misol_hanzi}")
         print(f"          {w.misol_pinyin}")
         print(f"          {w.misol_tarjima}")
     print(f"\n💡 {lesson.maslahat}")
+    if draft.script:
+        print(f"\n{line}\n🎬 REELS SSENARIYSI\n{line}\n{draft.script.as_text()}")
     print(f"\n{line}\n📝 CAPTION\n{line}\n{caption.full_text()}")
     print(f"\n{line}\n🔍 SIFAT NAZORATI: {qc.ball}/100 — "
           f"{'✅ o‘tdi' if qc.passed else '❌ xatolar bor'}\n{line}")
@@ -45,7 +49,9 @@ def show(draft) -> None:
         print(f"{icon} [{issue.joy}] {issue.muammo}\n   → {issue.taklif}")
     if not qc.muammolar:
         print("Muammo topilmadi.")
-    print(f"\n💾 Saqlandi: {draft.file.relative_to(settings.ROOT_DIR)}")
+    if draft.slides:
+        print(f"\n🖼  Slaydlar: {draft.slides[0].parent.relative_to(settings.ROOT_DIR)}/ ({len(draft.slides)} ta)")
+    print("💾 Bazaga saqlandi (data/balla.db). Telegram'da ko'rish: /show", draft.id)
     print("ℹ️  Bu faqat qoralama. Instagram'ga hech narsa joylanmadi.")
 
 
@@ -53,8 +59,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Balla China kontent qoralamasi yaratish")
     parser.add_argument("mavzu", nargs="?", help="Post mavzusi, masalan: \"salomlashish\"")
     parser.add_argument("--hsk", type=int, default=1, choices=range(1, 7), help="HSK darajasi (1–6)")
+    parser.add_argument("--format", default="carousel", choices=["carousel", "reels"])
     parser.add_argument("--check", action="store_true", help="Faqat sozlamalarni tekshirish")
+    parser.add_argument("--bot", action="store_true", help="Telegram botni ishga tushirish")
     args = parser.parse_args()
+
+    if args.bot:
+        from integrations.telegram_bot import run
+        run()
+        return
 
     if args.check or not args.mavzu:
         check()
@@ -63,11 +76,12 @@ def main() -> None:
         return
 
     from agents.base import AgentError
+    from agents.carousel import FontNotFoundError
     from agents.manager import create_draft
 
     try:
-        draft = create_draft(args.mavzu, args.hsk)
-    except AgentError as e:
+        draft = create_draft(args.mavzu, args.hsk, args.format)
+    except (AgentError, FontNotFoundError) as e:
         print(f"\n❌ {e}")
         sys.exit(1)
     show(draft)

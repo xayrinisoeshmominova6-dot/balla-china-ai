@@ -6,13 +6,13 @@ O'zbek tilli o'quvchilarga Xitoy tilini o'rgatuvchi **Balla China** brendi uchun
 
 ---
 
-## Hozirgi holat: 1-bosqich ✅
+## Hozirgi holat: 2-bosqich ✅
 
 | Bosqich | Mazmuni | Holat |
 |---|---|---|
 | 0 | Loyiha tuzilmasi va sozlamalar | ✅ Tayyor |
 | 1 | Birinchi kontent (terminalda) | ✅ Tayyor |
-| 2 | Telegram orqali tasdiqlash | ⏳ |
+| 2 | Telegram orqali tasdiqlash, Carousel, Reels | ✅ Tayyor |
 | 3 | Instagram'ga joylash | ⏳ |
 | 4 | Strategiya, analitika, n8n | ⏳ |
 
@@ -64,29 +64,79 @@ Natija:
 
 **Hech narsa Instagram'ga joylanmaydi** — bu faqat qoralama.
 
-### 7. Testlar (API kalitsiz ishlaydi)
+Reels ssenariysi uchun: `python main.py "salomlashish" --hsk 1 --format reels`
+
+### 7. Telegram botni ulash
+1. Telegram'da **@BotFather** ga yozing → `/newbot` → nom bering → **token** oling.
+2. Telegram'da **@userinfobot** ga yozing → u sizning **ID** raqamingizni beradi.
+3. `.env` fayliga yozing:
+   ```
+   TELEGRAM_BOT_TOKEN=<BotFather bergan token>
+   TELEGRAM_ADMIN_CHAT_ID=<sizning ID raqamingiz>
+   ```
+4. Botni ishga tushiring:
+   ```bash
+   python main.py --bot
+   ```
+5. Telegram'da botingizga `/start` yozing.
+
+Bot faqat **sizning** ID'ingizga javob beradi. Boshqa odamlar yozsa — javob bermaydi.
+
+**Bot buyruqlari:**
+
+| Buyruq | Nima qiladi |
+|---|---|
+| `/new salomlashish 1` | Carousel qoralama (oxirgi raqam — HSK, ixtiyoriy) |
+| `/reels salomlashish 2` | Reels ssenariysi |
+| `/list` | Oxirgi 10 ta qoralama va holati |
+| `/show 3` | 3-qoralamani qayta ko'rish |
+| `/cancel` | Tahrirni bekor qilish |
+
+**Tugmalar:** ✅ Tasdiqlash → "Ha, aniq tasdiqlayman" (ikki bosqich) · ✏️ Tahrir (izoh yozasiz, qayta tayyorlanadi) · ❌ Rad etish.
+
+> 2-bosqichda tasdiqlash faqat holatni "tasdiqlangan" qiladi. **Instagram'ga joylash 3-bosqichda** qo'shiladi.
+
+### 8. Xitoycha shrift (carousel uchun)
+Dastur Windows/Mac/Linux'dagi xitoycha shriftni o'zi qidiradi. Topilmasa:
+1. https://fonts.google.com/noto/specimen/Noto+Sans+SC dan **Noto Sans SC** ni yuklab oling.
+2. `.ttf` yoki `.otf` faylini `design/fonts/` papkasiga qo'ying.
+
+### 9. Testlar (API kalitsiz ishlaydi)
 ```bash
 python -m unittest discover tests
 ```
 
 ---
 
-## Qanday ishlaydi (1-bosqich)
+## Qanday ishlaydi
 
 ```
-Mavzu + HSK  →  📚 Education agent  →  ✍️ Caption agent  →  🔍 Quality Control
-                                                                │
-                                       xato bo'lsa ◄────────────┘
-                                       1 marta qayta yoziladi
-                                                                │
-                                                                ▼
-                                                   output/…json (qoralama)
+Telegram: /new mavzu 2
+      │
+      ▼
+📚 Education → (🎬 Reels ssenariy) → ✍️ Caption → 🔍 Quality Control
+                                                     │ xato bo'lsa — 1 marta qayta yoziladi
+                                                     ▼
+                                     🎨 Carousel slaydlari (1080×1350 PNG)
+                                                     │
+                                                     ▼
+                        Telegram: rasmlar + mazmun + caption + [✅] [✏️] [❌]
+                                                     │
+                              ✅ → "Ha, aniq" → holat: tasdiqlangan
 ```
+
+**Holatlar** (`storage/database.py`): `qc_passed/qc_failed → awaiting_approval → approved → published`.
+Tasdiqlanmagan qoralamani "published" qilish kod darajasida **taqiqlangan**.
 
 - **Education agent** (`agents/education.py`): 4–6 ta so'z, tonli pinyin, o'zbekcha tarjima, misol gap.
 - **Caption agent** (`agents/caption.py`): hook, matn, CTA, heshteglar.
 - **Quality Control** (`agents/quality.py`): avval Python qoidalari (kirill harflari, uzunlik, heshteglar), keyin Claude pinyin/ton/tarjimani tekshiradi.
+- **Reels agent** (`agents/reels.py`): sahnama-sahna ssenariy (videoni o'zingiz suratga olasiz).
+- **Carousel agent** (`agents/carousel.py`): brend ranglarida slaydlar chizadi (Claude'siz, bepul).
 - **Manager** (`agents/manager.py`): hammasini ketma-ket boshqaradi.
+- **Telegram bot** (`integrations/telegram_bot.py`): ko'rsatadi va tasdig'ingizni oladi.
+
+Slayd ranglari va Instagram nomi: `config/brand.yaml` → `colors`, `instagram_handle`.
 
 **Agentlar ko'rsatmalarini o'zgartirish:** `prompts/` papkasidagi `.md` fayllarni oddiy matn sifatida tahrirlang — kodga tegish shart emas.
 
