@@ -10,7 +10,7 @@ from types import SimpleNamespace
 from config import settings
 from storage import database
 from storage.database import StatusError
-from tests.test_quality import make_lesson
+from tests.sample_lesson import SAMPLE_LESSON
 
 
 class DatabaseTest(unittest.TestCase):
@@ -55,17 +55,44 @@ class DatabaseTest(unittest.TestCase):
 
 
 class CarouselTest(unittest.TestCase):
-    def test_renders_slides(self):
-        from agents.carousel import FontNotFoundError, render_carousel
+    def test_tone_detection(self):
+        from agents.carousel import tone_of
+        self.assertEqual([tone_of(x) for x in ["mā", "má", "mǎ", "mà", "ma", "lǜ"]], [1, 2, 3, 4, 0, 4])
+
+    def test_char_cells_pair_syllables(self):
+        from agents.carousel import char_cells
+        cells, ok = char_cells(SAMPLE_LESSON.sozlar[0])
+        self.assertTrue(ok)
+        self.assertEqual([(c["han"], c["syl"], c["tone"]) for c in cells],
+                         [("服", "fú", 2), ("务", "wù", 4), ("员", "yuán", 2)])
+
+    def test_highlight_escapes_html(self):
+        from agents.carousel import highlight
+        self.assertEqual(str(highlight("<b>我要</b>", "我要")), "&lt;b&gt;<mark>我要</mark>&lt;/b&gt;")
+
+    def test_slide_structure(self):
+        from agents.carousel import build_slides
+        kinds = [s["kind"] for s in build_slides(SAMPLE_LESSON)]
+        self.assertEqual(kinds, ["cover"] + ["word"] * 6 + ["mistake", "quiz", "final"])
+
+    def test_html_renders_all_slides(self):
+        from agents.carousel import build_slides, render_html
+        for s in build_slides(SAMPLE_LESSON):
+            html = render_html(SAMPLE_LESSON, s)
+            self.assertIn("window.__ready", html)
+        self.assertIn("<mark>6 ta ibora</mark>", render_html(SAMPLE_LESSON, build_slides(SAMPLE_LESSON)[0]))
+
+    def test_renders_png(self):
+        """Brauzer o'rnatilgan bo'lsa — haqiqiy PNG yasaladi, bo'lmasa o'tkazib yuboriladi."""
+        from agents.carousel import RenderError, render_reels_cover
         try:
             with tempfile.TemporaryDirectory() as tmp:
-                paths = render_carousel(make_lesson(), Path(tmp))
-                self.assertEqual(len(paths), 3)   # muqova + 1 so'z + yakun
+                paths = render_reels_cover(SAMPLE_LESSON, Path(tmp))
                 from PIL import Image
                 with Image.open(paths[0]) as im:
-                    self.assertEqual(im.size, (1080, 1350))
-        except FontNotFoundError:
-            self.skipTest("Xitoycha shrift o'rnatilmagan")
+                    self.assertEqual(im.size, (1080, 1920))
+        except RenderError as e:
+            self.skipTest(f"Brauzer yo'q: {e}")
 
 
 class BotHelpersTest(unittest.TestCase):

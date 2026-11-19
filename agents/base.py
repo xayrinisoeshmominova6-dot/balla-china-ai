@@ -47,8 +47,12 @@ def load_prompt(name: str) -> str:
     return text + brand_block
 
 
-def ask_claude(system_prompt: str, user_message: str, output_model: Type[T]) -> T:
-    """Claude'ga savol yuboradi va javobni `output_model` shaklida qaytaradi."""
+def ask_claude(system_prompt: str, user_message: str, output_model: Type[T],
+               effort: str = "medium") -> T:
+    """Claude'ga savol yuboradi va javobni `output_model` shaklida qaytaradi.
+
+    effort — qancha chuqur o'ylashi: "low", "medium", "high" (aniqlik muhim joyda).
+    """
     client = _get_client()
     try:
         response = client.beta.messages.parse(
@@ -57,7 +61,7 @@ def ask_claude(system_prompt: str, user_message: str, output_model: Type[T]) -> 
             system=system_prompt,
             messages=[{"role": "user", "content": user_message}],
             output_format=output_model,
-            output_config={"effort": "medium"},
+            output_config={"effort": effort},
             # Agar model so'rovni rad etsa, server avtomatik zaxira modelga o'tadi
             betas=["server-side-fallback-2026-07-01"],
             fallbacks="default",

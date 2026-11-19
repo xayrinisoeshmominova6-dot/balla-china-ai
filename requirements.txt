@@ -10,3 +10,8 @@ Pillow>=10.0.0
 python-telegram-bot>=21.0
 # Instagram API so'rovlari (3-bosqich)
 requests>=2.31.0
+# Carousel dizayn shablonlari (HTML)
+Jinja2>=3.1
+# HTML shablonni PNG rasmga aylantirish (brauzer).
+# O'rnatgandan keyin bir marta:  playwright install chromium
+playwright>=1.45

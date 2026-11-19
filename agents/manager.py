@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from agents.caption import Caption, write_caption
-from agents.carousel import render_carousel
+from agents.carousel import render_carousel, render_reels_cover
 from agents.education import LessonContent, create_lesson
 from agents.quality import QCReport, review
 from agents.reels import ReelsScript, write_script
@@ -72,11 +72,14 @@ def create_draft(topic: str, hsk_level: int, fmt: str = "carousel",
     }
     draft_id = database.save_draft(topic, hsk_level, fmt, status, data)
 
-    slides: List[Path] = []
+    out_dir = settings.ROOT_DIR / "output" / f"draft_{draft_id}"
     if fmt == "carousel":
         log("🎨 Carousel slaydlari chizilmoqda...")
-        slides = render_carousel(lesson, settings.ROOT_DIR / "output" / f"draft_{draft_id}")
-        data["slides"] = [str(p.relative_to(settings.ROOT_DIR)) for p in slides]
-        database.update_data(draft_id, data)
+        slides = render_carousel(lesson, out_dir)
+    else:
+        log("🎨 Reels muqovasi chizilmoqda...")
+        slides = render_reels_cover(lesson, out_dir)
+    data["slides"] = [str(p.relative_to(settings.ROOT_DIR)) for p in slides]
+    database.update_data(draft_id, data)
 
     return Draft(draft_id, fmt, lesson, caption, qc, status, slides, script)

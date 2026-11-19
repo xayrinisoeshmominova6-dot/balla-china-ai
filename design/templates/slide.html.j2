@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+{# Shriftlar Google Fonts'dan yuklanadi. Internet bo'lmasa — kompyuterdagi shriftlar ishlatiladi. #}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Noto+Sans+SC:wght@500;700;900&family=Noto+Serif+SC:wght@700;900&display=block" rel="stylesheet">
+<style>
+:root{
+  --red: {{ c.primary }};
+  --red-dark: {{ c.dark }};
+  --gold: {{ c.secondary }};
+  --cream: {{ c.background }};
+  --ink: {{ c.text }};
+  --t1:#E0393E; --t2:#1F9D55; --t3:#2F6FDB; --t4:#8E44AD; --t0:#8A8A8A;
+  --f-head:'Montserrat','Noto Sans SC','PingFang SC','Microsoft YaHei','WenQuanYi Zen Hei',sans-serif;
+  --f-han:'Noto Serif SC','Noto Sans SC','Songti SC','SimSun','WenQuanYi Zen Hei',serif;
+  --f-cn:'Noto Sans SC','PingFang SC','Microsoft YaHei','WenQuanYi Zen Hei',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:{{ W }}px;height:{{ H }}px;overflow:hidden}
+body{font-family:var(--f-head);color:var(--ink);-webkit-font-smoothing:antialiased}
+.slide{position:relative;width:{{ W }}px;height:{{ H }}px;overflow:hidden;padding:72px 80px;display:flex;flex-direction:column}
+.cn{font-family:var(--f-cn)}
+.han{font-family:var(--f-han)}
+
+/* --- fonlar --- */
+.bg-red{background:radial-gradient(120% 90% at 85% 0%, #E8344C 0%, var(--red) 42%, var(--red-dark) 100%);color:#fff}
+.bg-cream{background:var(--cream)}
+.bg-ink{background:radial-gradient(100% 80% at 0% 0%, #2A2830 0%, #141317 70%);color:#fff}
+.frame{position:absolute;inset:28px;border:2px solid rgba(244,180,0,.45);border-radius:40px;pointer-events:none}
+.bg-cream .frame{border-color:rgba(200,16,46,.14)}
+.watermark{position:absolute;font-family:var(--f-han);font-weight:900;line-height:1;white-space:nowrap;pointer-events:none}
+.dots-pattern{position:absolute;inset:0;background-image:radial-gradient(rgba(200,16,46,.07) 2px, transparent 2px);background-size:36px 36px;pointer-events:none}
+
+/* --- yuqori qator --- */
+.top{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:2}
+.brand{display:flex;align-items:center;gap:16px;font-weight:800;font-size:26px;letter-spacing:.14em}
+.seal{width:56px;height:56px;border-radius:14px;background:var(--red);color:#fff;display:grid;place-items:center;font-weight:900;font-size:30px;letter-spacing:0;box-shadow:0 6px 16px rgba(200,16,46,.3)}
+.bg-red .seal{background:#fff;color:var(--red);box-shadow:none}
+.chip{display:inline-flex;align-items:center;gap:10px;border-radius:999px;padding:12px 24px;font-weight:800;font-size:26px;letter-spacing:.06em}
+.chip-gold{background:var(--gold);color:var(--ink)}
+.chip-red{background:var(--red);color:#fff}
+.chip-ghost{background:rgba(255,255,255,.14);color:#fff;border:2px solid rgba(255,255,255,.35)}
+.chip-soft{background:#fff;color:var(--red);border:2px solid rgba(200,16,46,.18)}
+
+/* --- pastki qator --- */
+.bottom{margin-top:auto;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:2;font-weight:700;font-size:26px}
+.handle{opacity:.8}
+.progress{display:flex;gap:10px}
+.progress i{width:14px;height:14px;border-radius:50%;background:currentColor;opacity:.25}
+.progress i.on{width:40px;border-radius:8px;opacity:1;background:var(--gold)}
+.bg-cream .progress i.on{background:var(--red)}
+
+/* --- MUQOVA --- */
+.cover-body{flex:1;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:2}
+.cover-kicker{font-size:30px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:28px}
+.cover-title{font-weight:900;font-size:104px;line-height:1.04;letter-spacing:-.02em;max-height:560px}
+.cover-title mark{background:var(--gold);color:var(--ink);padding:0 14px;border-radius:14px;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.cover-sub{margin-top:36px;font-size:38px;font-weight:600;line-height:1.3;color:rgba(255,255,255,.88);max-height:110px}
+.teaser{display:flex;gap:16px;margin-top:48px;flex-wrap:wrap}
+.teaser span{font-family:var(--f-han);font-weight:900;font-size:44px;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.25);border-radius:20px;padding:10px 22px}
+.swipe{display:inline-flex;align-items:center;gap:14px;background:#fff;color:var(--red);border-radius:999px;padding:18px 34px;font-weight:900;font-size:30px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
+
+/* --- SO'Z slaydi --- */
+.word-head{display:flex;align-items:flex-end;gap:24px;margin-top:40px;position:relative;z-index:2}
+.num{font-weight:900;font-size:112px;line-height:.8;color:var(--red);letter-spacing:-.04em}
+.num-label{font-size:24px;font-weight:800;letter-spacing:.2em;color:var(--red);margin-bottom:8px}
+.pos{font-size:24px;font-weight:700;color:rgba(28,27,31,.55);margin-top:6px}
+.grid{display:flex;justify-content:center;gap:22px;margin-top:40px;position:relative;z-index:2}
+.cell{display:flex;flex-direction:column;align-items:center;gap:12px}
+.syl{font-weight:800;line-height:1;letter-spacing:.01em}
+.box{position:relative;background:#fff;border:4px solid var(--red);border-radius:18px;display:grid;place-items:center;box-shadow:0 16px 36px rgba(122,10,28,.12)}
+.box svg{position:absolute;inset:0;width:100%;height:100%}
+.box b{position:relative;font-family:var(--f-han);font-weight:900;line-height:1}
+.tone-1{color:var(--t1)} .tone-2{color:var(--t2)} .tone-3{color:var(--t3)} .tone-4{color:var(--t4)} .tone-0{color:var(--t0)}
+.meaning{text-align:center;font-weight:900;font-size:68px;line-height:1.1;margin-top:34px;letter-spacing:-.01em;max-height:160px;position:relative;z-index:2}
+.pinyin-full{text-align:center;font-size:30px;font-weight:600;color:rgba(28,27,31,.5);margin-top:8px}
+.card{border-radius:28px;padding:28px 34px;position:relative;z-index:2}
+.label{font-size:22px;font-weight:900;letter-spacing:.18em;margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.memo{background:#FFF1C9;margin-top:34px}
+.memo .label{color:#9A6B00}
+.memo p{font-size:31px;font-weight:600;line-height:1.38;max-height:132px}
+.example{background:#fff;margin-top:22px;border-left:10px solid var(--red);box-shadow:0 12px 30px rgba(122,10,28,.08)}
+.example .label{color:var(--red)}
+.ex-cn{font-family:var(--f-cn);font-weight:700;font-size:44px;line-height:1.3;max-height:118px}
+.ex-cn mark{background:none;color:var(--red);box-shadow:inset 0 -14px 0 rgba(244,180,0,.45)}
+.ex-py{font-size:27px;font-weight:600;color:rgba(28,27,31,.55);margin-top:8px}
+.ex-uz{font-size:30px;font-weight:700;margin-top:8px;max-height:84px}
+.legend{display:flex;gap:22px;font-size:20px;font-weight:700;color:rgba(28,27,31,.6)}
+.legend span{display:flex;align-items:center;gap:8px}
+.legend i{width:14px;height:14px;border-radius:50%}
+
+/* --- XATO slaydi --- */
+.h2{font-weight:900;font-size:84px;line-height:1.05;letter-spacing:-.02em;margin-top:56px;position:relative;z-index:2}
+.h2 em{font-style:normal;color:var(--red)}
+.bad{background:#FDE7EA;border:3px solid #F3B8C0;margin-top:48px}
+.bad .label{color:#C8102E}
+.good{background:#E3F5EA;border:3px solid #A9DDBE;margin-top:22px}
+.good .label{color:#1F7A45}
+.mistake-text{font-family:var(--f-cn);font-weight:700;font-size:52px;line-height:1.3;max-height:210px}
+.center{flex:1;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:2}
+.why{margin-top:34px;font-size:36px;font-weight:600;line-height:1.42;max-height:210px;position:relative;z-index:2}
+.why b{color:var(--red)}
+
+/* --- TEST slaydi --- */
+.q{font-weight:800;font-size:70px;line-height:1.12;max-height:330px;position:relative;z-index:2}
+.opts{display:flex;flex-direction:column;gap:22px;margin-top:52px;position:relative;z-index:2}
+.opt{display:flex;align-items:center;gap:26px;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.16);border-radius:26px;padding:30px 34px}
+.opt .letter{flex:none;width:64px;height:64px;border-radius:50%;background:var(--gold);color:var(--ink);display:grid;place-items:center;font-weight:900;font-size:32px}
+.opt .t{font-family:var(--f-head);font-size:44px;font-weight:700;line-height:1.25;max-height:100px}
+.comment{margin-top:46px;align-self:flex-start;background:var(--gold);color:var(--ink);font-weight:900;font-size:32px;border-radius:999px;padding:20px 36px;position:relative;z-index:2}
+
+/* --- YAKUNIY slayd --- */
+.recap{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:36px;position:relative;z-index:2}
+.rc{background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.2);border-radius:24px;padding:24px 26px;display:flex;align-items:center;gap:20px}
+.rc .h{font-family:var(--f-han);font-weight:900;font-size:58px;line-height:1;white-space:nowrap}
+.rc .py{font-size:24px;font-weight:700;color:var(--gold)}
+.rc .tr{font-size:28px;font-weight:700;line-height:1.2;max-height:64px}
+.tip{margin-top:26px;background:var(--gold);color:var(--ink);border-radius:26px;padding:24px 30px;font-size:29px;font-weight:700;line-height:1.35;max-height:150px;position:relative;z-index:2}
+.cta{display:flex;justify-content:space-between;margin-top:30px;position:relative;z-index:2}
+.cta div{flex:1;display:flex;flex-direction:column;align-items:center;gap:10px;font-weight:800;font-size:26px}
+.cta i{font-style:normal;width:88px;height:88px;border-radius:50%;background:#fff;color:var(--red);display:grid;place-items:center;font-size:40px}
+
+/* --- REELS muqovasi (9:16) --- */
+.reels-body{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;position:relative;z-index:2}
+.reels-title{font-weight:900;font-size:96px;line-height:1.05;letter-spacing:-.02em;max-height:520px;margin-top:56px}
+.reels-title mark{background:var(--gold);color:var(--ink);padding:0 14px;border-radius:14px;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+</style>
+</head>
+<body>
+{% set total = slide.total %}
+{% macro progress() -%}
+<div class="progress">{% for i in range(total) %}<i class="{{ 'on' if i + 1 == slide.page else '' }}"></i>{% endfor %}</div>
+{%- endmacro %}
+{% macro brandmark() -%}
+<div class="brand"><div class="seal">{{ brand.name[0] }}</div>{{ brand.name | upper }}</div>
+{%- endmacro %}
+
+{% if slide.kind == "cover" %}
+<div class="slide bg-red">
+  <div class="watermark" style="right:-60px;bottom:-40px;font-size:620px;color:rgba(255,255,255,.07)">{{ lesson.sozlar[0].hanzi[:2] }}</div>
+  <div class="frame"></div>
+  <div class="top">{{ brandmark() }}<span class="chip chip-gold">HSK {{ lesson.hsk_daraja }}</span></div>
+  <div class="cover-body">
+    <div class="cover-kicker">Xitoy tili · {{ lesson.sozlar | length }} ta so'z</div>
+    <div class="cover-title fit">{{ slide.title }}</div>
+    <div class="cover-sub fit">{{ lesson.kichik_sarlavha }}</div>
+    <div class="teaser">{% for w in lesson.sozlar[:3] %}<span>{{ w.hanzi }}</span>{% endfor %}{% if lesson.sozlar | length > 3 %}<span>…</span>{% endif %}</div>
+  </div>
+  <div class="bottom"><span class="swipe">Varaqlang →</span><span class="chip chip-ghost">📌 Saqlab qo'ying</span></div>
+</div>
+
+{% elif slide.kind == "word" %}
+{% set w = slide.word %}
+<div class="slide bg-cream">
+  <div class="dots-pattern"></div>
+  <div class="frame"></div>
+  <div class="top">{{ brandmark() }}<span class="chip chip-soft">HSK {{ lesson.hsk_daraja }}</span></div>
+  <div class="word-head">
+    <div class="num">{{ "%02d" | format(slide.index) }}</div>
+    <div><div class="num-label">SO'Z</div><div class="pos">{{ w.soz_turkumi }}</div></div>
+  </div>
+  <div class="grid">
+    {% for ch in slide.chars %}
+    <div class="cell">
+      {% if ch.syl %}<div class="syl tone-{{ ch.tone }}" style="font-size:{{ slide.syl_size }}px">{{ ch.syl }}</div>{% endif %}
+      <div class="box" style="width:{{ slide.box }}px;height:{{ slide.box }}px">
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none"><g stroke="{{ c.primary }}" stroke-opacity=".28" stroke-width=".7" stroke-dasharray="3 3" fill="none"><line x1="0" y1="50" x2="100" y2="50"/><line x1="50" y1="0" x2="50" y2="100"/><line x1="0" y1="0" x2="100" y2="100"/><line x1="100" y1="0" x2="0" y2="100"/></g></svg>
+        <b class="tone-{{ ch.tone }}" style="font-size:{{ (slide.box * 0.74) | int }}px">{{ ch.han }}</b>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% if not slide.syllables_ok %}<div class="pinyin-full">{{ w.pinyin }}</div>{% endif %}
+  <div class="meaning fit">{{ w.tarjima }}</div>
+  <div class="card memo"><div class="label">🧠 ESLAB QOLISH</div><p class="fit">{{ w.eslab_qolish }}</p></div>
+  <div class="card example">
+    <div class="label">MISOL</div>
+    <div class="ex-cn fit">{{ slide.example_html }}</div>
+    <div class="ex-py">{{ w.misol_pinyin }}</div>
+    <div class="ex-uz fit">{{ w.misol_tarjima }}</div>
+  </div>
+  <div class="bottom">
+    <div class="legend"><span><i style="background:var(--t1)"></i>1-ton</span><span><i style="background:var(--t2)"></i>2-ton</span><span><i style="background:var(--t3)"></i>3-ton</span><span><i style="background:var(--t4)"></i>4-ton</span></div>
+    {{ progress() }}
+  </div>
+</div>
+
+{% elif slide.kind == "mistake" %}
+{% set m = lesson.keng_xato %}
+<div class="slide bg-cream">
+  <div class="dots-pattern"></div>
+  <div class="frame"></div>
+  <div class="top">{{ brandmark() }}<span class="chip chip-red">⚠️ DIQQAT</span></div>
+  <div class="center">
+  <div class="h2" style="margin-top:0">Ko'pchilik <em>shu yerda</em> xato qiladi</div>
+  <div class="card bad"><div class="label">✕ XATO</div><div class="mistake-text fit">{{ m.xato }}</div></div>
+  <div class="card good"><div class="label">✓ TO'G'RI</div><div class="mistake-text fit">{{ m.togri }}</div></div>
+  <div class="why fit"><b>Nega?</b> {{ m.izoh }}</div>
+  </div>
+  <div class="bottom"><span class="handle">{{ brand.instagram_handle }}</span>{{ progress() }}</div>
+</div>
+
+{% elif slide.kind == "quiz" %}
+{% set q = lesson.test %}
+<div class="slide bg-ink">
+  <div class="watermark" style="right:-40px;top:120px;font-size:520px;color:rgba(255,255,255,.04)">?</div>
+  <div class="frame"></div>
+  <div class="top">{{ brandmark() }}<span class="chip chip-gold">🎯 TEST</span></div>
+  <div class="center">
+  <div class="q fit">{{ q.savol }}</div>
+  <div class="opts">
+    {% for v in q.variantlar[:3] %}
+    <div class="opt"><div class="letter">{{ "ABC"[loop.index0] }}</div><div class="t fit">{{ v }}</div></div>
+    {% endfor %}
+  </div>
+  <div class="comment">💬 Javobingizni izohda yozing</div>
+  </div>
+  <div class="bottom"><span class="handle">{{ brand.instagram_handle }}</span>{{ progress() }}</div>
+</div>
+
+{% elif slide.kind == "final" %}
+<div class="slide bg-red">
+  <div class="frame"></div>
+  <div class="top">{{ brandmark() }}<span class="chip chip-gold">HSK {{ lesson.hsk_daraja }}</span></div>
+  <div class="center">
+  <div class="h2" style="margin-top:0;font-size:76px">Takrorlaymiz ✍️</div>
+  <div class="recap">
+    {% for w in lesson.sozlar[:6] %}
+    <div class="rc"><div class="h">{{ w.hanzi }}</div><div><div class="py">{{ w.pinyin }}</div><div class="tr fit">{{ w.tarjima }}</div></div></div>
+    {% endfor %}
+  </div>
+  <div class="tip fit">💡 {{ lesson.maslahat }}</div>
+  <div class="cta">
+    <div><i>📌</i>Saqlang</div><div><i>↗</i>Ulashing</div><div><i>＋</i>Obuna bo'ling</div>
+  </div>
+  </div>
+  <div class="bottom"><span class="handle" style="font-size:30px;opacity:1">{{ brand.instagram_handle }}</span>{{ progress() }}</div>
+</div>
+
+{% elif slide.kind == "reels_cover" %}
+{% set w = lesson.sozlar[0] %}
+<div class="slide bg-red" style="padding:110px 80px">
+  <div class="watermark" style="left:-80px;bottom:120px;font-size:760px;color:rgba(255,255,255,.06)">{{ w.hanzi[:2] }}</div>
+  <div class="frame"></div>
+  <div class="top">{{ brandmark() }}<span class="chip chip-gold">HSK {{ lesson.hsk_daraja }}</span></div>
+  <div class="reels-body">
+    <div class="grid" style="margin-top:0">
+      {% for ch in slide.chars %}
+      <div class="cell">
+        {% if ch.syl %}<div class="syl" style="font-size:{{ slide.syl_size }}px;color:var(--gold)">{{ ch.syl }}</div>{% endif %}
+        <div class="box" style="width:{{ slide.box }}px;height:{{ slide.box }}px;border-color:#fff">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none"><g stroke="{{ c.primary }}" stroke-opacity=".28" stroke-width=".7" stroke-dasharray="3 3" fill="none"><line x1="0" y1="50" x2="100" y2="50"/><line x1="50" y1="0" x2="50" y2="100"/><line x1="0" y1="0" x2="100" y2="100"/><line x1="100" y1="0" x2="0" y2="100"/></g></svg>
+          <b style="font-size:{{ (slide.box * 0.74) | int }}px;color:var(--red)">{{ ch.han }}</b>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="reels-title fit">{{ slide.title }}</div>
+  </div>
+  <div class="bottom" style="justify-content:center"><span class="swipe">▶ Oxirigacha ko'ring</span></div>
+</div>
+{% endif %}
+
+<script>
+// Matn joyiga sig'masa — shriftni asta-sekin kichraytiramiz (dizayn buzilmasligi uchun)
+function fit(){
+  document.querySelectorAll('.fit').forEach(function(el){
+    var max = parseFloat(getComputedStyle(el).maxHeight);
+    if (!max || isNaN(max)) return;
+    var size = parseFloat(getComputedStyle(el).fontSize), min = size * 0.55;
+    while (el.scrollHeight > max + 1 && size > min){ size -= 1; el.style.fontSize = size + 'px'; }
+  });
+}
+document.fonts.ready.then(function(){ fit(); window.__ready = true; });
+setTimeout(function(){ if(!window.__ready){ fit(); window.__ready = true; } }, 8000);
+</script>
+</body>
+</html>

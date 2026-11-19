@@ -1,169 +1,167 @@
-"""5. Carousel Design Agent — dars mazmunidan Instagram carousel rasmlarini chizadi.
+"""5. Carousel Design Agent — dars mazmunidan professional slaydlar yasaydi.
 
-Bu agent Claude'ni chaqirmaydi: tayyor dars mazmunini brend ranglarida
-1080x1350 o'lchamdagi PNG slaydlarga aylantiradi (Pillow kutubxonasi).
+Qanday ishlaydi:
+  1. design/templates/slide.html.j2 — HTML/CSS dizayn shabloni.
+  2. Har bir slayd uchun shablon to'ldiriladi.
+  3. Brauzer (Playwright + Chromium) sahifani ochib, 1080×1350 PNG rasmga aylantiradi.
 
-Slaydlar:  1) Muqova  →  2..N) Har bir so'z  →  oxirgi) Maslahat + CTA
+Dizaynni o'zgartirish: shablon faylidagi CSS'ni tahrirlang. Ranglar — config/brand.yaml.
+
+Carousel tuzilmasi:
+  muqova → har bir so'z (田字格 katakda, ton ranglari bilan) → keng tarqalgan xato
+  → test → takrorlash + CTA
+Reels uchun: bitta 1080×1920 muqova rasmi.
 """
+import os
+import unicodedata
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
-from PIL import Image, ImageDraw, ImageFont
+from jinja2 import Environment, FileSystemLoader, select_autoescape
+from markupsafe import Markup, escape
 
 from agents.education import LessonContent, Word
 from config import settings
 
-W, H = 1080, 1350
-MARGIN = 90
+TEMPLATES_DIR = settings.ROOT_DIR / "design" / "templates"
+CAROUSEL_SIZE = (1080, 1350)   # Instagram 4:5
+REELS_SIZE = (1080, 1920)      # 9:16
+MAX_WORDS = 6
 
-# Xitoycha ieroglif + lotin harflarini ko'rsata oladigan shriftlar.
-# Eng yaxshisi: Noto Sans SC ni design/fonts/ papkasiga qo'yish (README'ga qarang).
-SYSTEM_FONTS = [
-    "C:/Windows/Fonts/msyh.ttc",                                   # Windows
-    "C:/Windows/Fonts/simhei.ttf",
-    "/System/Library/Fonts/PingFang.ttc",                          # Mac
-    "/System/Library/Fonts/STHeiti Medium.ttc",
-    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",      # Linux
-    "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
-    "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
-]
-
-
-class FontNotFoundError(Exception):
-    pass
+TONE_MARKS = {
+    1: "āēīōūǖĀĒĪŌŪǕ",
+    2: "áéíóúǘÁÉÍÓÚǗ",
+    3: "ǎěǐǒǔǚǍĚǏǑǓǙ",
+    4: "àèìòùǜÀÈÌÒÙǛ",
+}
+DEFAULT_COLORS = {"primary": "#C8102E", "dark": "#7A0A1C", "secondary": "#F4B400",
+                  "background": "#FFF7EC", "text": "#1C1B1F"}
 
 
-def find_font() -> Path:
-    fonts_dir = settings.ROOT_DIR / "design" / "fonts"
-    for pattern in ("*.otf", "*.ttf", "*.ttc"):
-        found = sorted(fonts_dir.glob(pattern))
-        if found:
-            return found[0]
-    for path in SYSTEM_FONTS:
-        if Path(path).exists():
-            return Path(path)
-    raise FontNotFoundError(
-        "Xitoycha shrift topilmadi. Noto Sans SC shriftini yuklab olib, "
-        "design/fonts/ papkasiga qo'ying (README'ga qarang)."
-    )
+class RenderError(Exception):
+    """Slaydlarni chizishda xato (o'zbekcha tushuntirish bilan)."""
 
 
-class Renderer:
-    def __init__(self, font_path: Optional[Path] = None):
-        self.font_path = str(font_path or find_font())
-        c = settings.load_brand()["colors"]
-        self.primary, self.secondary = c["primary"], c["secondary"]
-        self.bg, self.text = c["background"], c["text"]
-        self.brand = settings.load_brand()["brand"]
 
-    def font(self, size: int) -> ImageFont.FreeTypeFont:
-        return ImageFont.truetype(self.font_path, size)
 
-    def _canvas(self):
-        img = Image.new("RGB", (W, H), self.bg)
-        d = ImageDraw.Draw(img)
-        d.rectangle([0, 0, W, 24], fill=self.primary)
-        d.rectangle([0, H - 24, W, H], fill=self.primary)
-        return img, d
+def is_hanzi(ch: str) -> bool:
+    return "一" <= ch <= "鿿" or "㐀" <= ch <= "䶿"
 
-    def _wrap(self, d, text: str, font, max_w: int) -> List[str]:
-        words, lines, cur = text.split(), [], ""
-        for w in words:
-            test = f"{cur} {w}".strip()
-            if d.textlength(test, font=font) <= max_w or not cur:
-                cur = test
-            else:
-                lines.append(cur)
-                cur = w
-        if cur:
-            lines.append(cur)
-        # Bo'shliqsiz uzun qatorlarni (masalan, xitoycha gap) belgi bo'yicha bo'lamiz
-        result = []
-        for line in lines:
-            while d.textlength(line, font=font) > max_w and len(line) > 1:
-                cut = len(line)
-                while cut > 1 and d.textlength(line[:cut], font=font) > max_w:
-                    cut -= 1
-                result.append(line[:cut])
-                line = line[cut:]
-            result.append(line)
-        return result
 
-    def _text_block(self, d, text, size, y, color=None, max_lines=None) -> int:
-        """Matnni markazga yozadi, kerak bo'lsa shriftni kichraytiradi. Yangi y ni qaytaradi."""
-        max_w = W - 2 * MARGIN
-        while True:
-            f = self.font(size)
-            lines = self._wrap(d, text, f, max_w)
-            if not max_lines or len(lines) <= max_lines or size <= 24:
-                break
-            size -= 4
-        for line in lines:
-            tw = d.textlength(line, font=f)
-            d.text(((W - tw) / 2, y), line, font=f, fill=color or self.text)
-            y += int(size * 1.3)
-        return y
+def tone_of(syllable: str) -> int:
+    """Pinyin bo'g'inining tonini aniqlaydi: 1–4, neytral bo'lsa 0."""
+    s = unicodedata.normalize("NFC", syllable)
+    for tone, marks in TONE_MARKS.items():
+        if any(ch in marks for ch in s):
+            return tone
+    return 0
 
-    def _badge(self, d, text: str) -> None:
-        f = self.font(40)
-        tw = d.textlength(text, font=f)
-        x, y = W - MARGIN - tw - 40, 70
-        d.rounded_rectangle([x, y, x + tw + 40, y + 70], radius=35, fill=self.primary)
-        d.text((x + 20, y + 10), text, font=f, fill="#FFFFFF")
 
-    def _footer(self, d, page: int, total: int) -> None:
-        f = self.font(32)
-        d.text((MARGIN, H - 90), self.brand["instagram_handle"], font=f, fill=self.primary)
-        p = f"{page}/{total}"
-        d.text((W - MARGIN - d.textlength(p, font=f), H - 90), p, font=f, fill="#888888")
+def char_cells(word: Word):
+    """Ieroglif + uning pinyin bo'g'ini + toni. Bo'g'inlar soni mos kelmasa — pinyinsiz."""
+    chars = [ch for ch in word.hanzi if is_hanzi(ch)]
+    ok = len(chars) == len(word.bogin_pinyin) and len(chars) > 0
+    cells = []
+    for i, ch in enumerate(chars):
+        syl = word.bogin_pinyin[i].strip() if ok else ""
+        cells.append({"han": ch, "syl": syl, "tone": tone_of(syl) if ok else 0})
+    return cells, ok
 
-    def cover(self, lesson: LessonContent, total: int) -> Image.Image:
-        img, d = self._canvas()
-        self._badge(d, f"HSK {lesson.hsk_daraja}")
-        y = self._text_block(d, lesson.sarlavha, 88, 420, color=self.primary, max_lines=4)
-        d.rectangle([W / 2 - 80, y + 30, W / 2 + 80, y + 38], fill=self.secondary)
-        self._text_block(d, "Varaqlang →", 44, y + 90, color="#666666")
-        self._footer(d, 1, total)
-        return img
 
-    def word(self, w: Word, level: int, page: int, total: int) -> Image.Image:
-        img, d = self._canvas()
-        self._badge(d, f"HSK {level}")
-        y = self._text_block(d, w.hanzi, 220, 230, color=self.primary, max_lines=2)
-        y = self._text_block(d, w.pinyin, 64, y + 20, max_lines=2)
-        y = self._text_block(d, w.tarjima, 56, y + 10, color="#444444", max_lines=3)
-        d.line([MARGIN, y + 40, W - MARGIN, y + 40], fill=self.secondary, width=4)
-        y = self._text_block(d, "Misol:", 38, y + 80, color="#888888")
-        y = self._text_block(d, w.misol_hanzi, 54, y + 10, max_lines=2)
-        y = self._text_block(d, w.misol_pinyin, 38, y + 5, color="#555555", max_lines=2)
-        self._text_block(d, w.misol_tarjima, 38, y + 5, color="#555555", max_lines=3)
-        self._footer(d, page, total)
-        return img
+def highlight(sentence: str, word: str) -> Markup:
+    """Misol gapdagi o'rganilayotgan so'zni ajratib ko'rsatadi (HTML xavfsiz)."""
+    safe = str(escape(sentence))
+    w = str(escape(word))
+    if w and w in safe:
+        safe = safe.replace(w, f"<mark>{w}</mark>", 1)
+    return Markup(safe)
 
-    def final(self, lesson: LessonContent, total: int) -> Image.Image:
-        img, d = self._canvas()
-        y = self._text_block(d, "Maslahat", 64, 280, color=self.primary)
-        y = self._text_block(d, lesson.maslahat, 50, y + 40, max_lines=8)
-        d.rounded_rectangle([MARGIN + 80, y + 100, W - MARGIN - 80, y + 220],
-                            radius=60, fill=self.primary)
-        self._text_block(d, "Saqlab qo'ying!", 52, y + 128, color="#FFFFFF")
-        self._footer(d, total, total)
-        return img
+
+def title_html(title: str, accent: str) -> Markup:
+    return highlight(title, accent.strip())
+
+
+def box_size(n_chars: int, reels: bool = False) -> int:
+    sizes = {1: 300, 2: 260, 3: 220, 4: 180}
+    size = sizes.get(n_chars, 145)
+    return int(size * 1.15) if reels else size
+
+
+def build_slides(lesson: LessonContent) -> List[dict]:
+    words = lesson.sozlar[:MAX_WORDS]
+    total = len(words) + 4
+    slides = [{"kind": "cover", "title": title_html(lesson.sarlavha, lesson.sarlavha_urgu)}]
+    for i, w in enumerate(words, 1):
+        cells, ok = char_cells(w)
+        box = box_size(len(cells))
+        slides.append({"kind": "word", "word": w, "index": i, "chars": cells,
+                       "syllables_ok": ok, "box": box, "syl_size": max(30, int(box * 0.2)),
+                       "example_html": highlight(w.misol_hanzi, w.hanzi)})
+    slides += [{"kind": "mistake"}, {"kind": "quiz"}, {"kind": "final"}]
+    for page, s in enumerate(slides, 1):
+        s["page"], s["total"] = page, total
+    return slides
+
+
+def build_reels_cover(lesson: LessonContent) -> dict:
+    cells, _ = char_cells(lesson.sozlar[0])
+    box = box_size(len(cells), reels=True)
+    return {"kind": "reels_cover", "title": title_html(lesson.sarlavha, lesson.sarlavha_urgu),
+            "chars": cells, "box": box, "syl_size": max(34, int(box * 0.2)), "page": 1, "total": 1}
+
+
+def _template():
+    env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)),
+                      autoescape=select_autoescape(["html", "j2"]))
+    return env.get_template("slide.html.j2")
+
+
+def render_html(lesson: LessonContent, slide: dict, size=CAROUSEL_SIZE) -> str:
+    brand = settings.load_brand()
+    colors = {**DEFAULT_COLORS, **(brand.get("colors") or {})}
+    b = {"name": brand["brand"]["name"], "instagram_handle": brand["brand"]["instagram_handle"]}
+    return _template().render(lesson=lesson, slide=slide, brand=b, c=colors, W=size[0], H=size[1])
+
+
+def _screenshot(pages: List[tuple], out_dir: Path) -> List[Path]:
+    """pages: [(html, (w, h), fayl_nomi), ...] → PNG fayllar."""
+    try:
+        from playwright.sync_api import Error as PlaywrightError, sync_playwright
+    except ImportError:
+        raise RenderError("Playwright o'rnatilmagan. Buyruq: pip install -r requirements.txt "
+                          "va keyin: playwright install chromium")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    paths = []
+    try:
+        with sync_playwright() as p:
+            exe = os.getenv("CHROMIUM_PATH") or None
+            browser = p.chromium.launch(executable_path=exe)
+            try:
+                for html, (w, h), name in pages:
+                    page = browser.new_page(viewport={"width": w, "height": h})
+                    page.set_content(html, wait_until="networkidle", timeout=30000)
+                    page.wait_for_function("window.__ready === true", timeout=15000)
+                    path = out_dir / name
+                    page.screenshot(path=str(path), type="png")
+                    page.close()
+                    paths.append(path)
+            finally:
+                browser.close()
+    except PlaywrightError as e:
+        if "Executable doesn't exist" in str(e):
+            raise RenderError("Brauzer topilmadi. Buyruq: playwright install chromium")
+        raise RenderError(f"Slaydlarni chizishda xato: {str(e).splitlines()[0]}")
+    return paths
 
 
 def render_carousel(lesson: LessonContent, out_dir: Path) -> List[Path]:
-    """Barcha slaydlarni out_dir ga PNG qilib saqlaydi va fayl yo'llarini qaytaradi."""
-    r = Renderer()
-    words = lesson.sozlar[:8]           # Instagram carousel: ko'pi bilan 10 ta slayd
-    total = len(words) + 2
-    slides = [r.cover(lesson, total)]
-    slides += [r.word(w, lesson.hsk_daraja, i + 2, total) for i, w in enumerate(words)]
-    slides.append(r.final(lesson, total))
+    """Barcha carousel slaydlarini out_dir ga PNG qilib saqlaydi."""
+    pages = [(render_html(lesson, s), CAROUSEL_SIZE, f"slide_{s['page']:02d}.png")
+             for s in build_slides(lesson)]
+    return _screenshot(pages, out_dir)
 
-    out_dir.mkdir(parents=True, exist_ok=True)
-    paths = []
-    for i, img in enumerate(slides, 1):
-        p = out_dir / f"slide_{i:02d}.png"
-        img.save(p, "PNG")
-        paths.append(p)
-    return paths
+
+def render_reels_cover(lesson: LessonContent, out_dir: Path) -> List[Path]:
+    """Reels uchun 1080×1920 muqova rasmini yasaydi."""
+    html = render_html(lesson, build_reels_cover(lesson), REELS_SIZE)
+    return _screenshot([(html, REELS_SIZE, "reels_cover.png")], out_dir)

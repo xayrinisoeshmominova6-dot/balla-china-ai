@@ -86,9 +86,15 @@ def format_lesson(rec: DraftRecord) -> str:
              f"📌 {lesson['sarlavha']}", ""]
     for i, w in enumerate(lesson["sozlar"], 1):
         lines += [f"{i}. {w['hanzi']} ({w['pinyin']}) — {w['tarjima']}",
+                  f"   🧠 {w['eslab_qolish']}",
                   f"   {w['misol_hanzi']} / {w['misol_pinyin']}",
                   f"   {w['misol_tarjima']}"]
-    lines += ["", f"💡 {lesson['maslahat']}"]
+    m, q = lesson["keng_xato"], lesson["test"]
+    answer = q["variantlar"][q["togri_javob"]] if 0 <= q["togri_javob"] < len(q["variantlar"]) else "?"
+    lines += ["", f"⚠️ Xato: {m['xato']}", f"✅ To'g'ri: {m['togri']}", f"   {m['izoh']}",
+              "", f"🎯 Test: {q['savol']}", f"   Javob: {answer} — {q['izoh']}",
+              "   (javobni izohlarda o'zingiz pin qilib qo'ying)",
+              "", f"💡 {lesson['maslahat']}"]
 
     qc = d["qc"]
     errors = [m for m in qc["muammolar"] if m["jiddiylik"] == "xato"]
@@ -116,7 +122,10 @@ def format_script(script: dict) -> str:
 async def send_draft(bot, chat_id: int, rec: DraftRecord) -> None:
     """Qoralamani to'liq yuboradi: rasmlar/ssenariy → mazmun → caption + tugmalar."""
     slides = rec.data.get("slides") or []
-    if slides:
+    if len(slides) == 1:
+        with open(settings.ROOT_DIR / slides[0], "rb") as f:
+            await bot.send_photo(chat_id, photo=f)
+    elif slides:
         files = [open(settings.ROOT_DIR / p, "rb") for p in slides[:10]]
         try:
             await bot.send_media_group(chat_id, media=[InputMediaPhoto(f) for f in files])
@@ -140,7 +149,7 @@ async def send_draft(bot, chat_id: int, rec: DraftRecord) -> None:
 async def generate_and_send(update: Update, context: ContextTypes.DEFAULT_TYPE,
                             topic: str, hsk: int, fmt: str, feedback: str = "") -> None:
     from agents.base import AgentError
-    from agents.carousel import FontNotFoundError
+    from agents.carousel import RenderError
     from agents.manager import create_draft
 
     chat_id = update.effective_chat.id
@@ -150,7 +159,7 @@ async def generate_and_send(update: Update, context: ContextTypes.DEFAULT_TYPE,
         draft = await asyncio.to_thread(create_draft, topic, hsk, fmt, feedback, log.info)
         database.set_status(draft.id, "awaiting_approval")
         rec = database.get_draft(draft.id)
-    except (AgentError, FontNotFoundError) as e:
+    except (AgentError, RenderError) as e:
         await context.bot.send_message(chat_id, f"❌ {e}")
         return
     except Exception:

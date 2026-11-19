@@ -38,7 +38,9 @@ source .venv/bin/activate
 ### 3. Kutubxonalarni o'rnating
 ```bash
 pip install -r requirements.txt
+playwright install chromium
 ```
+Ikkinchi buyruq dizayn uchun brauzerni yuklaydi (bir marta, ~150 MB).
 
 ### 4. `.env` faylini yarating
 ```bash
@@ -96,10 +98,25 @@ Bot faqat **sizning** ID'ingizga javob beradi. Boshqa odamlar yozsa — javob be
 
 > 2-bosqichda tasdiqlash faqat holatni "tasdiqlangan" qiladi. **Instagram'ga joylash 3-bosqichda** qo'shiladi.
 
-### 8. Xitoycha shrift (carousel uchun)
-Dastur Windows/Mac/Linux'dagi xitoycha shriftni o'zi qidiradi. Topilmasa:
-1. https://fonts.google.com/noto/specimen/Noto+Sans+SC dan **Noto Sans SC** ni yuklab oling.
-2. `.ttf` yoki `.otf` faylini `design/fonts/` papkasiga qo'ying.
+### 8. Dizayn
+Slaydlar HTML/CSS shablondan brauzer orqali PNG qilib chiziladi:
+- Shablon: `design/templates/slide.html.j2` (CSS shu faylning boshida)
+- Ranglar va Instagram nomi: `config/brand.yaml`
+- Shriftlar: Montserrat, Noto Sans SC, Noto Serif SC (Google Fonts, internet orqali yuklanadi)
+
+**Carousel tuzilmasi (10 slayd, 1080×1350):**
+
+| Slayd | Mazmuni |
+|---|---|
+| 1. Muqova | Kuchli sarlavha (urg'u oltin rangda), so'zlar ko'rinishi, "Varaqlang" |
+| 2–7. So'zlar | 田字格 katakda ieroglif, **ton ranglari** bo'yicha pinyin, tarjima, 🧠 eslab qolish usuli, misol gap |
+| 8. Keng tarqalgan xato | ✕ Xato / ✓ To'g'ri + izoh |
+| 9. Test | Savol + A/B/C — izohlarda faollikni oshiradi |
+| 10. Takrorlash | Barcha so'zlar, maslahat, Saqlang / Ulashing / Obuna bo'ling |
+
+**Reels:** sahnama-sahna ssenariy + 1080×1920 muqova rasmi.
+
+Ton ranglari: 1-ton qizil, 2-ton yashil, 3-ton ko'k, 4-ton binafsha, neytral kulrang.
 
 ### 9. Testlar (API kalitsiz ishlaydi)
 ```bash
@@ -132,7 +149,7 @@ Tasdiqlanmagan qoralamani "published" qilish kod darajasida **taqiqlangan**.
 - **Caption agent** (`agents/caption.py`): hook, matn, CTA, heshteglar.
 - **Quality Control** (`agents/quality.py`): avval Python qoidalari (kirill harflari, uzunlik, heshteglar), keyin Claude pinyin/ton/tarjimani tekshiradi.
 - **Reels agent** (`agents/reels.py`): sahnama-sahna ssenariy (videoni o'zingiz suratga olasiz).
-- **Carousel agent** (`agents/carousel.py`): brend ranglarida slaydlar chizadi (Claude'siz, bepul).
+- **Carousel agent** (`agents/carousel.py`): HTML shablondan professional slaydlar chizadi (Claude'siz, bepul).
 - **Manager** (`agents/manager.py`): hammasini ketma-ket boshqaradi.
 - **Telegram bot** (`integrations/telegram_bot.py`): ko'rsatadi va tasdig'ingizni oladi.
 

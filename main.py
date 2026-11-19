@@ -35,10 +35,13 @@ def show(draft) -> None:
     print(f"\n{line}\n📄 Qoralama #{draft.id}\n📌 {lesson.sarlavha}   [HSK {lesson.hsk_daraja}]\n{line}")
     for i, w in enumerate(lesson.sozlar, 1):
         print(f"\n{i}. {w.hanzi}  ({w.pinyin}) — {w.tarjima}")
+        print(f"   🧠 {w.eslab_qolish}")
         print(f"   Misol: {w.misol_hanzi}")
         print(f"          {w.misol_pinyin}")
         print(f"          {w.misol_tarjima}")
-    print(f"\n💡 {lesson.maslahat}")
+    print(f"\n⚠️  Xato: {lesson.keng_xato.xato}  →  ✅ {lesson.keng_xato.togri}")
+    print(f"🎯 Test: {lesson.test.savol} {lesson.test.variantlar} (javob: {lesson.test.togri_javob + 1})")
+    print(f"💡 {lesson.maslahat}")
     if draft.script:
         print(f"\n{line}\n🎬 REELS SSENARIYSI\n{line}\n{draft.script.as_text()}")
     print(f"\n{line}\n📝 CAPTION\n{line}\n{caption.full_text()}")
@@ -50,7 +53,7 @@ def show(draft) -> None:
     if not qc.muammolar:
         print("Muammo topilmadi.")
     if draft.slides:
-        print(f"\n🖼  Slaydlar: {draft.slides[0].parent.relative_to(settings.ROOT_DIR)}/ ({len(draft.slides)} ta)")
+        print(f"\n🖼  Rasmlar: {draft.slides[0].parent.relative_to(settings.ROOT_DIR)}/ ({len(draft.slides)} ta)")
     print("💾 Bazaga saqlandi (data/balla.db). Telegram'da ko'rish: /show", draft.id)
     print("ℹ️  Bu faqat qoralama. Instagram'ga hech narsa joylanmadi.")
 
@@ -76,12 +79,12 @@ def main() -> None:
         return
 
     from agents.base import AgentError
-    from agents.carousel import FontNotFoundError
+    from agents.carousel import RenderError
     from agents.manager import create_draft
 
     try:
         draft = create_draft(args.mavzu, args.hsk, args.format)
-    except (AgentError, FontNotFoundError) as e:
+    except (AgentError, RenderError) as e:
         print(f"\n❌ {e}")
         sys.exit(1)
     show(draft)

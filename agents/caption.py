@@ -27,4 +27,4 @@ def write_caption(lesson: LessonContent, feedback: str = "") -> Caption:
     )
     if feedback:
         message += f"\nOldingi variantda topilgan xatolar — ularni tuzating:\n{feedback}\n"
-    return ask_claude(load_prompt("caption"), message, Caption)
+    return ask_claude(load_prompt("caption"), message, Caption, effort="medium")

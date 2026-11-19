@@ -36,8 +36,9 @@ caption:
     - "#hsk"
     - "#ballachina"
 
-colors:                       # carousel dizayni uchun (keyin o'zgartiring)
-  primary: "#C8102E"          # xitoycha qizil
-  secondary: "#FFD700"        # oltin
-  background: "#FFFFFF"
-  text: "#1A1A1A"
+colors:                       # carousel dizayni ranglari (o'zingiznikiga moslang)
+  primary: "#C8102E"          # asosiy qizil
+  dark: "#7A0A1C"             # to'q qizil (gradient uchun)
+  secondary: "#F4B400"        # oltin — urg'u va tugmalar
+  background: "#FFF7EC"       # krem fon (so'z slaydlari)
+  text: "#1C1B1F"             # asosiy matn
