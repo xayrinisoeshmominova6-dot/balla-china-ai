@@ -23,6 +23,8 @@ class PinyinCheck(str, Enum):
     NOT_CHECKED = "not_checked"
     MATCH = "match"
     MISMATCH = "mismatch"            # ⚠️ farq bor — odam ko'rishi shart
+    TONE_DIFF = "tone_diff"          # bo'g'inlar bir xil, faqat ohang farq qiladi
+                                     # (ko'pincha yengil ohang yoki 变调) — odam ko'rishi kerak
     POLYPHONE = "polyphone"          # ko'p o'qilishli belgi (多音字) — odam ko'rishi kerak
 
 
@@ -65,7 +67,8 @@ class Lesson(BaseModel):
             v
             for v in self.vocabulary
             if v.confidence == Confidence.UNCERTAIN
-            or v.pinyin_check in (PinyinCheck.MISMATCH, PinyinCheck.POLYPHONE)
+            or v.pinyin_check
+            in (PinyinCheck.MISMATCH, PinyinCheck.POLYPHONE, PinyinCheck.TONE_DIFF)
         ]
 
     @property

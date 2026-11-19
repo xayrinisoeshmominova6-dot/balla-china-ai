@@ -100,6 +100,26 @@ class ContentStore:
         self._log(content_id, current, new, actor=actor, note=note)
         self.conn.commit()
 
+    def update_payload(
+        self, content_id: int, payload: dict[str, Any], *, actor: str, note: str | None = None
+    ) -> None:
+        """Mazmunni yangilaydi. Tasdiqlangan yoki joylangan kontentni o'zgartirib bo'lmaydi."""
+        item = self.get(content_id)
+        if item is None:
+            raise KeyError(f"{content_id} raqamli kontent topilmadi.")
+        current = ContentStatus(item["status"])
+        if current in (ContentStatus.APPROVED, ContentStatus.PUBLISHED):
+            raise ValueError(
+                f"'{current.value}' holatidagi kontentni o'zgartirib bo'lmaydi. "
+                "Avval uni qayta tekshiruvga qaytaring."
+            )
+        self.conn.execute(
+            "UPDATE content SET payload = ?, updated_at = ? WHERE id = ?",
+            (json.dumps(payload, ensure_ascii=False), _now(), content_id),
+        )
+        self._log(content_id, current, current, actor=actor, note=note or "mazmun yangilandi")
+        self.conn.commit()
+
     def history(self, content_id: int) -> list[dict[str, Any]]:
         rows = self.conn.execute(
             "SELECT from_status, to_status, actor, note, at FROM status_history "

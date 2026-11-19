@@ -8,7 +8,7 @@ Auditoriya: xitoy tilini o'rganayotgan o'zbek tilli foydalanuvchilar.
 | Bosqich | Mazmuni | Holati |
 |---|---|---|
 | 1 | Asos: sozlamalar, Claude ulanishi, sxemalar, ma'lumotlar bazasi | ✅ tayyor |
-| 2 | Xitoy tili o'qituvchisi + tekshiruv qavati | ⏳ |
+| 2 | Xitoy tili o'qituvchisi + tekshiruv qavati | ✅ tayyor |
 | 3 | Karusel, Reels, Caption, Kreativ direktor | ⏳ |
 | 4 | Kontent strategi (kalendar) | ⏳ |
 | 5 | Tasdiqlash + Publisher (quruq rejim) | ⏳ |
@@ -34,6 +34,19 @@ balla check
 pytest
 ```
 
+## Dars yaratish va tekshirish
+
+```bash
+balla lesson "Oila" --level 1 --words 6   # 1. AI dars yaratadi (QORALAMA)
+balla review 1                            # 2. tekshiruvga yuborish
+balla show 1                              # 3. o'qituvchi ko'rib chiqadi
+balla verify 1                            # 4. o'qituvchi so'zlarni tasdiqlaydi
+balla approve 1                           # 5. tasdiqlash
+```
+
+Dars matni `output/lessons/lesson_ID.md` fayliga ham yoziladi.
+HSK ro'yxati manbasi: `data/hsk/SOURCE.md`.
+
 ## 🔐 Xavfsizlik qoidalari
 
 - API kalitlari **faqat** `.env` faylida turadi. `.env` GitHub'ga yuklanmaydi.
@@ -53,7 +66,9 @@ Tasdiqlanmagan postni joylab bo'lmaydi. Bu qoida kodda yozilgan va testlar bilan
 ## 🇨🇳 Xitoycha ma'lumotlar aniqligi
 
 - AI ishonchi komil bo'lmagan ma'lumotni `uncertain` deb belgilaydi.
-- Pinyin `pypinyin` yordamida avtomatik tekshiriladi (2-bosqich).
+- So'zlar faqat tekshirilgan HSK ro'yxatidan tanlanadi. Hanzi, Pinyin va daraja Claude'dan emas, ro'yxatdan olinadi.
+- Pinyin ro'yxat yoki `pypinyin` bilan avtomatik tekshiriladi.
+- O'qituvchi barcha so'zlarni tasdiqlamaguncha darsni tasdiqlab bo'lmaydi.
 - Har bir so'z o'qituvchi tasdiqlamaguncha `teacher_verified = false` holatida qoladi.
 
 ## Tuzilma
