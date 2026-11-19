@@ -1,0 +1,12 @@
+# Claude API bilan ishlash
+anthropic>=0.40.0
+# .env faylidan kalitlarni o'qish
+python-dotenv>=1.0.0
+# brand.yaml sozlamalarini o'qish
+PyYAML>=6.0
+# Carousel rasmlarini yaratish
+Pillow>=10.0.0
+# Telegram bot (2-bosqich)
+python-telegram-bot>=21.0
+# Instagram API so'rovlari (3-bosqich)
+requests>=2.31.0

@@ -1,0 +1,35 @@
+# ============================================
+# MAXFIY FAYLLAR — hech qachon GitHub'ga yuklanmaydi
+# ============================================
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials*.json
+secrets/
+
+# Ma'lumotlar bazasi va yaratilgan fayllar
+data/*
+!data/.gitkeep
+output/*
+!output/.gitkeep
+*.db
+*.sqlite
+*.sqlite3
+*.log
+logs/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+
+# Tizim fayllari
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

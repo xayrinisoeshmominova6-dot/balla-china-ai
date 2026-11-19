@@ -1,0 +1,43 @@
+# ============================================
+# BALLA CHINA — brend sozlamalari
+# Bu faylni kodga tegmasdan bemalol tahrirlashingiz mumkin.
+# ============================================
+
+brand:
+  name: "Balla China"
+  instagram_handle: "@balla_china"   # o'zingiznikiga almashtiring
+
+audience:
+  language: "o'zbek"
+  script: "lotin"            # barcha matnlar faqat lotin yozuvida
+  description: "Xitoy tilini o'rganayotgan o'zbek tilli o'quvchilar"
+
+content:
+  # Aralash daraja: har bir post bittasiga belgilanadi
+  hsk_levels: [1, 2, 3, 4, 5, 6]
+  show_level_badge: true     # slaydda "HSK 2" kabi belgi chiqadi
+  formats: ["carousel", "reels"]
+  # Har bir xitoycha so'z uchun majburiy qismlar
+  required_fields: ["ieroglif", "pinyin", "tarjima", "misol"]
+
+tone:
+  style: "do'stona, aniq, rag'batlantiruvchi"
+  avoid:
+    - "kirill harflari"
+    - "haddan tashqari rasmiy uslub"
+    - "tekshirilmagan da'volar"
+
+caption:
+  max_length: 2200           # Instagram chegarasi
+  hashtags_count: 10
+  default_hashtags:
+    - "#xitoytili"
+    - "#xitoytilinioʻrganamiz"
+    - "#hsk"
+    - "#ballachina"
+
+colors:                       # carousel dizayni uchun (keyin o'zgartiring)
+  primary: "#C8102E"          # xitoycha qizil
+  secondary: "#FFD700"        # oltin
+  background: "#FFFFFF"
+  text: "#1A1A1A"
