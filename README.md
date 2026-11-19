@@ -6,14 +6,14 @@ O'zbek tilli o'quvchilarga Xitoy tilini o'rgatuvchi **Balla China** brendi uchun
 
 ---
 
-## Hozirgi holat: 2-bosqich ✅
+## Hozirgi holat: 3-bosqich ✅
 
 | Bosqich | Mazmuni | Holat |
 |---|---|---|
 | 0 | Loyiha tuzilmasi va sozlamalar | ✅ Tayyor |
 | 1 | Birinchi kontent (terminalda) | ✅ Tayyor |
 | 2 | Telegram orqali tasdiqlash, Carousel, Reels | ✅ Tayyor |
-| 3 | Instagram'ga joylash | ⏳ |
+| 3 | Instagram'ga joylash (tasdiqdan keyin) | ✅ Tayyor |
 | 4 | Strategiya, analitika, n8n | ⏳ |
 
 ---
@@ -96,9 +96,46 @@ Bot faqat **sizning** ID'ingizga javob beradi. Boshqa odamlar yozsa — javob be
 
 **Tugmalar:** ✅ Tasdiqlash → "Ha, aniq tasdiqlayman" (ikki bosqich) · ✏️ Tahrir (izoh yozasiz, qayta tayyorlanadi) · ❌ Rad etish.
 
-> 2-bosqichda tasdiqlash faqat holatni "tasdiqlangan" qiladi. **Instagram'ga joylash 3-bosqichda** qo'shiladi.
+Tasdiqlangan carousel ostida **🚀 Instagram'ga joylash** tugmasi chiqadi → **"Ha, hozir joylansin"** (yana ikkinchi tasdiq).
+Ya'ni post chiqishi uchun jami **4 marta** o'zingiz bosasiz: Tasdiqlash → Ha, aniq → Joylash → Ha, hozir.
 
-### 8. Dizayn
+### 8. Instagram'ni ulash (bir marta, ~30 daqiqa)
+
+**a) Instagram akkaunt**
+1. Instagram → Sozlamalar → *Account type and tools* → **Professional akkauntga o'tish** (Business yoki Creator).
+2. Akkauntni **Facebook sahifasiga** ulang (Meta Business Suite → Settings → Instagram accounts).
+
+**b) Meta ilovasi va token**
+1. https://developers.facebook.com → **My Apps → Create App** (Business turi).
+2. **Graph API Explorer** da ilovangizni tanlang va quyidagi ruxsatlar bilan token oling:
+   `instagram_basic`, `instagram_content_publish`, `pages_show_list`, `pages_read_engagement`, `business_management`.
+3. Tokenni **uzoq muddatli (60 kunlik)** tokenga almashtiring: *Access Token Debugger → Extend Access Token*.
+4. Instagram akkaunt ID'sini toping (Graph API Explorer'da):
+   - `me/accounts` → sahifangiz `id` si;
+   - `<sahifa_id>?fields=instagram_business_account` → shu raqam kerak.
+
+**c) Rasm hostingi** — Instagram rasmni faqat internet havolasidan oladi:
+https://api.imgbb.com → **Get API key** (bepul). Rasmlar 24 soatdan keyin o'chadi.
+
+**d) `.env` fayliga yozing:**
+```
+INSTAGRAM_ACCESS_TOKEN=<60 kunlik token>
+INSTAGRAM_BUSINESS_ACCOUNT_ID=<instagram_business_account raqami>
+IMGBB_API_KEY=<imgbb kaliti>
+DRY_RUN=true
+```
+
+**e) Sinash:** avval `DRY_RUN=true` bilan Telegram'da joylashni bosib ko'ring — hech narsa chiqmaydi, faqat tekshiriladi.
+Hammasi joyida bo'lsa → `DRY_RUN=false` qilib, botni qayta ishga tushiring.
+
+**Himoya:**
+- Token boshqa akkauntga tegishli bo'lsa (`brand.yaml` dagi `instagram_handle` bilan mos kelmasa) — hech narsa joylanmaydi.
+- Bir postni ikki marta joylab bo'lmaydi.
+- Xato bo'lsa — qoralama "tasdiqlangan" holatiga qaytadi, qayta urinish mumkin.
+- ⚠️ Token 60 kundan keyin eskiradi — yangisini olib, `.env` ga yozing.
+- Hozircha faqat **carousel** joylanadi. Reels'ni video suratga olgach, o'zingiz joylaysiz.
+
+### 9. Dizayn
 Slaydlar HTML/CSS shablondan brauzer orqali PNG qilib chiziladi:
 - Shablon: `design/templates/slide.html.j2` (CSS shu faylning boshida)
 - Ranglar va Instagram nomi: `config/brand.yaml`
@@ -118,7 +155,7 @@ Slaydlar HTML/CSS shablondan brauzer orqali PNG qilib chiziladi:
 
 Ton ranglari: 1-ton qizil, 2-ton yashil, 3-ton ko'k, 4-ton binafsha, neytral kulrang.
 
-### 9. Testlar (API kalitsiz ishlaydi)
+### 10. Testlar (API kalitsiz ishlaydi)
 ```bash
 python -m unittest discover tests
 ```
@@ -140,9 +177,11 @@ Telegram: /new mavzu 2
                         Telegram: rasmlar + mazmun + caption + [✅] [✏️] [❌]
                                                      │
                               ✅ → "Ha, aniq" → holat: tasdiqlangan
+                                                     │
+                       🚀 Joylash → "Ha, hozir" → akkaunt tekshiruvi → Instagram ✅
 ```
 
-**Holatlar** (`storage/database.py`): `qc_passed/qc_failed → awaiting_approval → approved → published`.
+**Holatlar** (`storage/database.py`): `qc_passed/qc_failed → awaiting_approval → approved → publishing → published`.
 Tasdiqlanmagan qoralamani "published" qilish kod darajasida **taqiqlangan**.
 
 - **Education agent** (`agents/education.py`): 4–6 ta so'z, tonli pinyin, o'zbekcha tarjima, misol gap.
@@ -152,6 +191,7 @@ Tasdiqlanmagan qoralamani "published" qilish kod darajasida **taqiqlangan**.
 - **Carousel agent** (`agents/carousel.py`): HTML shablondan professional slaydlar chizadi (Claude'siz, bepul).
 - **Manager** (`agents/manager.py`): hammasini ketma-ket boshqaradi.
 - **Telegram bot** (`integrations/telegram_bot.py`): ko'rsatadi va tasdig'ingizni oladi.
+- **Instagram** (`integrations/instagram.py`): tasdiqlangan carousel'ni Graph API orqali joylaydi.
 
 Slayd ranglari va Instagram nomi: `config/brand.yaml` → `colors`, `instagram_handle`.
 

@@ -3,7 +3,8 @@
 XAVFSIZLIK:
 - Bot FAQAT .env dagi TELEGRAM_ADMIN_CHAT_ID dan kelgan xabarlarga javob beradi.
 - Tasdiqlash ikki bosqichli: "✅ Tasdiqlash" → "Ha, aniq tasdiqlayman".
-- 2-bosqichda tasdiqlash faqat holatni "approved" qiladi. Instagram'ga hech narsa joylanmaydi.
+- Tasdiqlangandan keyin alohida "🚀 Instagram'ga joylash" → "Ha, hozir joylansin" kerak.
+- DRY_RUN=true bo'lsa — Instagram'ga hech narsa yuborilmaydi.
 
 Buyruqlar:
   /start                        yordam
@@ -78,6 +79,27 @@ def confirm_keyboard(draft_id: int) -> InlineKeyboardMarkup:
     ]])
 
 
+def publish_keyboard(draft_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([[
+        InlineKeyboardButton("🚀 Instagram'ga joylash", callback_data=f"publish:{draft_id}"),
+    ]])
+
+
+def publish_confirm_keyboard(draft_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([[
+        InlineKeyboardButton("🚀 Ha, hozir joylansin", callback_data=f"publish_go:{draft_id}"),
+        InlineKeyboardButton("⏸ Keyinroq", callback_data=f"publish_later:{draft_id}"),
+    ]])
+
+
+def keyboard_for(rec: DraftRecord) -> Optional[InlineKeyboardMarkup]:
+    if rec.status == "awaiting_approval":
+        return approval_keyboard(rec.id)
+    if rec.status == "approved" and rec.format == "carousel":
+        return publish_keyboard(rec.id)
+    return None
+
+
 def format_lesson(rec: DraftRecord) -> str:
     d = rec.data
     lesson = d["lesson"]
@@ -142,8 +164,9 @@ async def send_draft(bot, chat_id: int, rec: DraftRecord) -> None:
     parts = list(chunks(caption_msg))
     for part in parts[:-1]:
         await bot.send_message(chat_id, part)
-    markup = approval_keyboard(rec.id) if rec.status == "awaiting_approval" else None
-    await bot.send_message(chat_id, parts[-1], reply_markup=markup)
+    if rec.data.get("permalink"):
+        parts[-1] += f"\n\n🔗 {rec.data['permalink']}"
+    await bot.send_message(chat_id, parts[-1], reply_markup=keyboard_for(rec))
 
 
 async def generate_and_send(update: Update, context: ContextTypes.DEFAULT_TYPE,
@@ -230,10 +253,15 @@ async def on_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if rec is None:
         await query.message.reply_text("Qoralama topilmadi.")
         return
-    if rec.status != "awaiting_approval":
+    needed = "approved" if action.startswith("publish") else "awaiting_approval"
+    if rec.status != needed:
         await query.edit_message_reply_markup(reply_markup=None)
         await query.message.reply_text(
-            f"#{draft_id} allaqachon: {STATUS_LABELS.get(rec.status, rec.status)}")
+            f"#{draft_id} holati: {STATUS_LABELS.get(rec.status, rec.status)}")
+        return
+
+    if action.startswith("publish"):
+        await handle_publish(query, action, rec)
         return
 
     try:
@@ -244,9 +272,14 @@ async def on_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         elif action == "confirm":
             database.set_status(draft_id, "approved")
             await query.edit_message_reply_markup(reply_markup=None)
-            await query.message.reply_text(
-                f"✅ #{draft_id} tasdiqlandi.\n"
-                "ℹ️ Instagram'ga joylash 3-bosqichda qo'shiladi. Hozircha hech narsa joylanmadi.")
+            if rec.format == "carousel":
+                mode = "🧪 Sinov rejimi (DRY_RUN): haqiqiy joylash bo'lmaydi." if settings.DRY_RUN else ""
+                await query.message.reply_text(
+                    f"✅ #{draft_id} tasdiqlandi. Hali hech narsa joylanmadi.\n{mode}".strip(),
+                    reply_markup=publish_keyboard(draft_id))
+            else:
+                await query.message.reply_text(
+                    f"✅ #{draft_id} tasdiqlandi. Reels'ni video suratga olgach, o'zingiz joylaysiz.")
         elif action == "reject":
             database.set_status(draft_id, "rejected")
             await query.edit_message_reply_markup(reply_markup=None)
@@ -259,6 +292,59 @@ async def on_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 "Bekor qilish: /cancel")
     except StatusError as e:
         await query.message.reply_text(f"⚠️ {e}")
+
+
+async def handle_publish(query, action: str, rec: DraftRecord) -> None:
+    """🚀 tugmalari. Joylash faqat 'approved' holatidan va ikkinchi tasdiqdan keyin."""
+    from integrations.instagram import PublishError, publish_carousel
+
+    if rec.format != "carousel":
+        await query.message.reply_text("Hozircha faqat carousel joylanadi.")
+        return
+    if action == "publish":
+        target = "🧪 DRY_RUN (sinov)" if settings.DRY_RUN else f"@{settings.load_brand()['brand']['instagram_handle'].lstrip('@')}"
+        await query.edit_message_reply_markup(reply_markup=publish_confirm_keyboard(rec.id))
+        await query.message.reply_text(
+            f"⚠️ #{rec.id} ni Instagram'ga joylaysizmi?\nAkkaunt: {target}\n"
+            f"Rasmlar: {len(rec.data.get('slides') or [])} ta\n"
+            "Joylangan postni faqat Instagram ilovasida o'chirish mumkin.")
+        return
+    if action == "publish_later":
+        await query.edit_message_reply_markup(reply_markup=publish_keyboard(rec.id))
+        return
+    if action != "publish_go":
+        return
+
+    try:
+        database.set_status(rec.id, "publishing")    # ikki marta bosilsa — ikkinchisi to'xtaydi
+    except StatusError as e:
+        await query.message.reply_text(f"⚠️ {e}")
+        return
+    await query.edit_message_reply_markup(reply_markup=None)
+    await query.message.reply_text("📤 Joylanmoqda... (1–2 daqiqa)")
+
+    slides = [settings.ROOT_DIR / p for p in rec.data.get("slides") or []]
+    try:
+        result = await asyncio.to_thread(publish_carousel, slides, rec.data["caption_full"], log.info)
+    except PublishError as e:
+        database.set_status(rec.id, "approved")
+        await query.message.reply_text(f"❌ Joylanmadi: {e}", reply_markup=publish_keyboard(rec.id))
+        return
+    except Exception:
+        database.set_status(rec.id, "approved")
+        log.exception("Joylashda kutilmagan xato")
+        await query.message.reply_text("❌ Kutilmagan xato. Terminaldagi logni tekshiring.",
+                                       reply_markup=publish_keyboard(rec.id))
+        return
+
+    if result.dry_run:
+        database.set_status(rec.id, "approved")
+        await query.message.reply_text(result.message, reply_markup=publish_keyboard(rec.id))
+        return
+    data = dict(rec.data, media_id=result.media_id, permalink=result.permalink)
+    database.update_data(rec.id, data)
+    database.set_status(rec.id, "published")
+    await query.message.reply_text(f"🎉 #{rec.id} {result.message}!\n🔗 {result.permalink or ''}".strip())
 
 
 async def cmd_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

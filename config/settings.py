@@ -20,6 +20,8 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_ADMIN_CHAT_ID = os.getenv("TELEGRAM_ADMIN_CHAT_ID", "")
 INSTAGRAM_ACCESS_TOKEN = os.getenv("INSTAGRAM_ACCESS_TOKEN", "")
 INSTAGRAM_BUSINESS_ACCOUNT_ID = os.getenv("INSTAGRAM_BUSINESS_ACCOUNT_ID", "")
+INSTAGRAM_GRAPH_VERSION = os.getenv("INSTAGRAM_GRAPH_VERSION", "v21.0")
+IMGBB_API_KEY = os.getenv("IMGBB_API_KEY", "")
 
 # Xavfsiz standart: agar aniq "false" yozilmagan bo'lsa, sinov rejimi yoqiq.
 DRY_RUN = os.getenv("DRY_RUN", "true").strip().lower() != "false"
@@ -39,4 +41,5 @@ def key_status() -> dict:
         "TELEGRAM_ADMIN_CHAT_ID": bool(TELEGRAM_ADMIN_CHAT_ID),
         "INSTAGRAM_ACCESS_TOKEN": bool(INSTAGRAM_ACCESS_TOKEN),
         "INSTAGRAM_BUSINESS_ACCOUNT_ID": bool(INSTAGRAM_BUSINESS_ACCOUNT_ID),
+        "IMGBB_API_KEY": bool(IMGBB_API_KEY),
     }

@@ -2,7 +2,9 @@
 
 Holatlar va ruxsat etilgan o'tishlar:
 
-  qc_passed / qc_failed ──► awaiting_approval ──► approved ──► published (3-bosqich)
+  qc_passed / qc_failed ──► awaiting_approval ──► approved ──► publishing ──► published
+                                                                 │
+                                                  xato bo'lsa ◄──┘ (approved ga qaytadi)
                                      │
                                      ├──► rejected
                                      └──► revised   (tahrir so'raldi, yangi qoralama yaratildi)
@@ -26,7 +28,8 @@ TRANSITIONS = {
     "qc_passed": {"awaiting_approval", "rejected"},
     "qc_failed": {"awaiting_approval", "rejected"},
     "awaiting_approval": {"approved", "rejected", "revised"},
-    "approved": {"published"},
+    "approved": {"publishing"},
+    "publishing": {"published", "approved"},
     "rejected": set(),
     "revised": set(),
     "published": set(),
@@ -37,6 +40,7 @@ STATUS_LABELS = {
     "qc_failed": "🟠 QC xatolari bor",
     "awaiting_approval": "⏳ Tasdiq kutilmoqda",
     "approved": "✅ Tasdiqlangan",
+    "publishing": "📤 Joylanmoqda",
     "rejected": "❌ Rad etilgan",
     "revised": "✏️ Qayta ishlangan",
     "published": "🚀 Joylangan",
