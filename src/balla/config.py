@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     instagram_business_account_id: str | None = Field(
         default=None, alias="INSTAGRAM_BUSINESS_ACCOUNT_ID"
     )
+    # graph.instagram.com — "Instagram Login" orqali olingan token uchun (tavsiya etiladi)
+    # graph.facebook.com  — "Facebook Login" (Facebook sahifa orqali) olingan token uchun
+    instagram_api_host: str = Field(default="graph.instagram.com", alias="INSTAGRAM_API_HOST")
+    instagram_api_version: str = Field(default="v23.0", alias="INSTAGRAM_API_VERSION")
 
     # --- Saqlash ---
     database_path: Path = Field(default=Path("output/balla.db"), alias="BALLA_DATABASE_PATH")

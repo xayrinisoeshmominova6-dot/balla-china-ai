@@ -4,6 +4,7 @@ Ishlatish:
     balla check          — sozlamalarni tekshiradi (kalitlarni ko'rsatmaydi)
     balla list           — barcha kontent ro'yxati
     balla history ID     — kontent holatlari tarixi
+    balla instagram      — Instagram ulanishini tekshiradi (faqat o'qiydi)
 """
 
 from __future__ import annotations
@@ -48,6 +49,23 @@ def cmd_history(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_instagram(_: argparse.Namespace) -> int:
+    from balla.integrations.instagram import InstagramClient, InstagramError
+
+    try:
+        p = InstagramClient().get_profile()
+    except InstagramError as e:
+        print(f"❌ {e}")
+        return 1
+    print("✅ Instagram'ga ulanish ishlayapti!\n")
+    print(f"  Akkaunt:      @{p.username}")
+    if p.name:
+        print(f"  Nomi:         {p.name}")
+    print(f"  Obunachilar:  {p.followers_count if p.followers_count is not None else '-'}")
+    print(f"  Postlar:      {p.media_count if p.media_count is not None else '-'}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="balla", description="Balla China AI Instagram menejeri")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -56,6 +74,7 @@ def main(argv: list[str] | None = None) -> int:
     h = sub.add_parser("history", help="Kontent holatlari tarixi")
     h.add_argument("id", type=int)
     h.set_defaults(func=cmd_history)
+    sub.add_parser("instagram", help="Instagram ulanishini tekshirish").set_defaults(func=cmd_instagram)
     args = parser.parse_args(argv)
     return args.func(args)
 
